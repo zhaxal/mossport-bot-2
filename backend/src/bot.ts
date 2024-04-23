@@ -31,6 +31,6 @@ bot.on("message", async (ctx) => {
     Markup.removeKeyboard()
   );
 });
-bot.launch();
+// bot.launch();
 
 export default bot;

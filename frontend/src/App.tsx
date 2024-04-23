@@ -1,7 +1,20 @@
-import "./App.css";
+import HomePage from "./components/HomePage";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+
+const queryClient = new QueryClient();
 
 function App() {
-  return <h1 className="text-3xl font-bold underline">Hello world!</h1>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+        </Routes>
+      </Router>
+    </QueryClientProvider>
+  );
 }
 
 export default App;
