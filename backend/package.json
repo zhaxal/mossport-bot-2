@@ -1,0 +1,37 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "backend for mossport bot",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx tsc",
+    "start": "node dist/index.js",
+    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q dist/index.js\""
+  },
+  "author": "Anuarbek Zhakhangir",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "formidable": "^3.5.1",
+    "json2csv": "^6.0.0-alpha.2",
+    "mongodb": "^6.5.0",
+    "random-number-csprng": "^1.0.2",
+    "telegraf": "^4.16.3",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/formidable": "^3.4.5",
+    "@types/json2csv": "^5.0.7",
+    "@types/node-cron": "^3.0.11",
+    "@types/random-number-csprng": "^1.0.2",
+    "@types/uuid": "^9.0.8",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.1.0",
+    "typescript": "^5.4.5"
+  }
+}
