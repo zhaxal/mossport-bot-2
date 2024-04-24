@@ -7,8 +7,9 @@ import { ObjectId } from "mongodb";
 import { v4 as uuidv4 } from "uuid";
 import { IncomingForm } from "formidable";
 
-import { eventInfoCol, userCol, bucket, tokenCol } from "../database";
 import bot from "../bot";
+import { eventInfoCol, userCol, bucket, tokenCol } from "../database";
+
 
 dotenv.config();
 

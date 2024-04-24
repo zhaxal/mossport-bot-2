@@ -52,9 +52,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       verifyAdminToken(token).then(() => setLoading(false));
     }
 
-    // if (operatorToken) {
-    //   verifyOperatorToken(operatorToken).then(() => setLoading(false));
-    // }
+    if (operatorToken) {
+      verifyOperatorToken(operatorToken).then(() => setLoading(false));
+    }
+
+    setLoading(false);
   }, []);
 
   const logout = () => {

@@ -5,6 +5,7 @@ import express from "express";
 import { ObjectId } from "mongodb";
 
 import adminRouter from "./src/routes/admin";
+import operatorRouter from "./src/routes/operator";
 
 import { bucket, eventInfoCol } from "./src/database";
 
@@ -50,7 +51,7 @@ apiRouter.get("/event", async (req, res) => {
 });
 
 apiRouter.use("/admin", adminRouter);
-// apiRouter.use("/operator", operatorRouter);
+apiRouter.use("/operator", operatorRouter);
 
 app.use("/api", apiRouter);
 
