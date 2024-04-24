@@ -1,3 +1,5 @@
+import { AuthProvider } from "./contexts/AuthContext";
+
 import HomePage from "./components/HomePage";
 import LoginPage from "./components/LoginPage";
 import SecuredRoute from "./components/SecuredRoute";
@@ -7,8 +9,7 @@ import OperatorPage from "./components/operator-page-components/OperatorPage";
 import EventCreatePage from "./components/admin-page-components/EventCreatePage";
 import EventPage from "./components/admin-page-components/event-page-components/EventPage";
 import EventInfoPage from "./components/admin-page-components/event-page-components/EventInfoPage";
-
-import { AuthProvider } from "./contexts/AuthContext";
+import EventFileUploadPage from "./components/admin-page-components/event-page-components/EventFileUploadPage";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
@@ -65,6 +66,15 @@ function App() {
               element={
                 <SecuredRoute allowedRoles={["admin"]}>
                   <EventInfoPage />
+                </SecuredRoute>
+              }
+            />
+
+            <Route
+              path="/admin/events/:eventId/file"
+              element={
+                <SecuredRoute allowedRoles={["admin"]}>
+                  <EventFileUploadPage />
                 </SecuredRoute>
               }
             />

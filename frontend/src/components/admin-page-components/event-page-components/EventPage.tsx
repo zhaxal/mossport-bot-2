@@ -22,6 +22,7 @@ function EventPage() {
     queryKey: ["event", eventId],
     queryFn: async () => {
       const { data } = await backendInstance.get<Event>(`/event/${eventId}`);
+
       return data;
     },
     enabled: !!eventId,
@@ -51,7 +52,7 @@ function EventPage() {
       </button>
 
       <button
-        onClick={() => navigate("/admin/events")}
+        onClick={() => navigate(`/admin/events/${eventId}/file`)}
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full sm:w-auto"
       >
         Загрузка файлов

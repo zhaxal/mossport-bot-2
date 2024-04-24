@@ -162,19 +162,19 @@ function EventInfoPage() {
 
       <div className="flex flex-col space-y-2 text-gray-700">
         {data?.description && (
-          <div className="bg-gray-200 p-2 rounded">
+          <div className="bg-gray-200 p-2 rounded overflow-auto">
             <span className="font-bold text-lg">Описание:</span>{" "}
             {data?.description}
           </div>
         )}
         {data?.schedule && (
-          <div className="bg-gray-200 p-2 rounded">
+          <div className="bg-gray-200 p-2 rounded overflow-auto">
             <span className="font-bold text-lg">Расписание:</span>{" "}
             {data?.schedule}
           </div>
         )}
         {data?.partnerMessage && (
-          <div className="bg-gray-200 p-2 rounded">
+          <div className="bg-gray-200 p-2 rounded overflow-auto">
             <span className="font-bold text-lg">Спонсорское сообщение:</span>{" "}
             {data?.partnerMessage}
           </div>
