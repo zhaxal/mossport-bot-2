@@ -6,13 +6,6 @@ import backendInstance from "../../utils/backendInstance";
 interface Event {
   _id: string;
   title: string;
-  description?: string;
-  schedule?: string;
-  partnerMessage?: string;
-  mapLink?: string;
-  rulesLink?: string;
-  policyLink?: string;
-  prizeTableLink?: string;
 }
 
 function EventListPage() {

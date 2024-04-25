@@ -8,8 +8,13 @@ import { v4 as uuidv4 } from "uuid";
 import { IncomingForm } from "formidable";
 
 import bot from "../bot";
-import { eventInfoCol, userCol, bucket, tokenCol } from "../database";
-
+import {
+  eventInfoCol,
+  userCol,
+  bucket,
+  tokenCol,
+  drawInfoCol,
+} from "../database";
 
 dotenv.config();
 
@@ -190,6 +195,23 @@ adminRouter.get("/event/:eventId/users/csv", async (req, res) => {
   res.setHeader("Content-Disposition", "attachment; filename=users.csv");
 
   res.send(csvData);
+});
+
+adminRouter.patch("/event/:eventId/draw", async (req, res) => {
+  if (req.headers.authorization !== adminToken) {
+    return res.status(401).send("Unauthorized");
+  }
+
+  const eventId = req.params.eventId;
+  const drawInfo = req.body;
+
+  await drawInfoCol.updateOne(
+    { eventId: new ObjectId(eventId) },
+    { $set: drawInfo },
+    { upsert: true }
+  );
+
+  res.send("Draw info updated");
 });
 
 export default adminRouter;

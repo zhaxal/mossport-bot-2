@@ -15,7 +15,6 @@ interface EventInfo {
   mapLink?: string;
   rulesLink?: string;
   policyLink?: string;
-  prizeTableLink?: string;
 }
 
 export const eventInfoCol = db.collection<EventInfo>("event-info");
@@ -48,10 +47,18 @@ export const userPrizeStatusCol =
   db.collection<UserPrizeStatus>("user-prize-status");
 
 interface DrawInfo {
+  eventId: ObjectId;
   introMessage: string;
   winnerNumber: number;
   drawInterval: number;
   drawDuration: number;
   winnersMessage: string;
-  
 }
+
+export const drawInfoCol = db.collection<DrawInfo>("draw-info");
+
+interface Subscribers {
+  telegramId: number;
+}
+
+export const subscribersCol = db.collection<Subscribers>("subscribers");

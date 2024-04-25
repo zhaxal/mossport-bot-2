@@ -4,16 +4,17 @@ import HomePage from "./components/HomePage";
 import LoginPage from "./components/LoginPage";
 import SecuredRoute from "./components/SecuredRoute";
 import AdminPage from "./components/admin-page-components/AdminPage";
+import TokenPage from "./components/admin-page-components/TokenPage";
 import EventListPage from "./components/admin-page-components/EventListPage";
 import OperatorPage from "./components/operator-page-components/OperatorPage";
 import EventCreatePage from "./components/admin-page-components/EventCreatePage";
 import EventPage from "./components/admin-page-components/event-page-components/EventPage";
 import EventInfoPage from "./components/admin-page-components/event-page-components/EventInfoPage";
+import DrawPage from "./components/admin-page-components/event-page-components/draw-page-components/DrawPage";
 import EventFileUploadPage from "./components/admin-page-components/event-page-components/EventFileUploadPage";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
-import TokenPage from "./components/admin-page-components/TokenPage";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,15 @@ function App() {
               element={
                 <SecuredRoute allowedRoles={["admin"]}>
                   <EventInfoPage />
+                </SecuredRoute>
+              }
+            />
+
+            <Route
+              path="/admin/events/:eventId/draw"
+              element={
+                <SecuredRoute allowedRoles={["admin"]}>
+                  <DrawPage />
                 </SecuredRoute>
               }
             />

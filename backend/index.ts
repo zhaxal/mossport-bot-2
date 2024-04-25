@@ -7,7 +7,7 @@ import { ObjectId } from "mongodb";
 import adminRouter from "./src/routes/admin";
 import operatorRouter from "./src/routes/operator";
 
-import { bucket, eventInfoCol } from "./src/database";
+import { bucket, drawInfoCol, eventInfoCol } from "./src/database";
 
 import "./src/bot";
 
@@ -43,6 +43,16 @@ apiRouter.get("/event/:eventId", async (req, res) => {
 
   const event = await eventInfoCol.findOne({ _id: new ObjectId(eventId) });
   res.send(event);
+});
+
+apiRouter.get("/event/:eventId/draw", async (req, res) => {
+  const eventId = req.params.eventId;
+
+  const drawInfo = await drawInfoCol.findOne({
+    eventId: new ObjectId(eventId),
+  });
+
+  res.send(drawInfo);
 });
 
 apiRouter.get("/event", async (req, res) => {
