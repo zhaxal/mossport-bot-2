@@ -37,7 +37,10 @@ adminRouter.post("/event", async (req, res) => {
 
   const event = req.body;
 
-  await eventInfoCol.insertOne(event);
+  await eventInfoCol.insertOne({
+    ...event,
+    status: "created",
+  });
 
   res.send("Event added");
 });
@@ -176,6 +179,22 @@ adminRouter.post("/event/:eventId/notification", async (req, res) => {
   });
 
   res.send("Notification sent");
+});
+
+adminRouter.patch("/event/:eventId/status", async (req, res) => {
+  if (req.headers.authorization !== adminToken) {
+    return res.status(401).send("Unauthorized");
+  }
+
+  const eventId = req.params.eventId;
+  const { status } = req.body;
+
+  await eventInfoCol.updateOne(
+    { _id: new ObjectId(eventId) },
+    { $set: { status } }
+  );
+
+  res.send("Event status updated");
 });
 
 adminRouter.get("/event/:eventId/users/csv", async (req, res) => {

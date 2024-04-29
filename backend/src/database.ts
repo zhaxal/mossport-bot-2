@@ -15,16 +15,18 @@ interface EventInfo {
   mapLink?: string;
   rulesLink?: string;
   policyLink?: string;
+  status: "created" | "active" | "finished";
 }
 
 export const eventInfoCol = db.collection<EventInfo>("event-info");
 
 interface User {
-  userId: number;
+  subscriberId: ObjectId;
   firstName: string;
   lastName: string;
   phoneNumber: string;
   shortId: number;
+  eventId: ObjectId;
 }
 
 export const userCol = db.collection<User>("users");

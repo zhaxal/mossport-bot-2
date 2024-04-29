@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import backendInstance from "../../../../utils/backendInstance";
@@ -109,6 +109,7 @@ function DrawEditForm(props: DrawEditFormProps) {
 
 function DrawPage() {
   const { eventId } = useParams();
+  const navigate = useNavigate();
 
   const [mode, setMode] = useState<"view" | "edit">("view");
 
@@ -162,6 +163,15 @@ function DrawPage() {
       <h1 className="mb-4 text-3xl sm:text-5xl font-bold">
         Настройки розыгрыша
       </h1>
+
+      <button
+        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4"
+        onClick={() => {
+          navigate(-1);
+        }}
+      >
+        Назад
+      </button>
 
       {!data && (
         <button

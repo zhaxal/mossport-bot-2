@@ -4,6 +4,7 @@ interface WizardState {
   lastName?: string;
   firstName?: string;
   phoneNumber?: string;
+  eventId?: string;
 }
 
 export interface MyContext extends Context {

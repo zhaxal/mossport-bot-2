@@ -10,6 +10,8 @@ import OperatorPage from "./components/operator-page-components/OperatorPage";
 import EventCreatePage from "./components/admin-page-components/EventCreatePage";
 import EventPage from "./components/admin-page-components/event-page-components/EventPage";
 import EventInfoPage from "./components/admin-page-components/event-page-components/EventInfoPage";
+import EventStatusPage from "./components/admin-page-components/event-page-components/EventStatusPage";
+import NotificationPage from "./components/admin-page-components/event-page-components/NotificationPage";
 import DrawPage from "./components/admin-page-components/event-page-components/draw-page-components/DrawPage";
 import EventFileUploadPage from "./components/admin-page-components/event-page-components/EventFileUploadPage";
 
@@ -77,6 +79,24 @@ function App() {
               element={
                 <SecuredRoute allowedRoles={["admin"]}>
                   <EventInfoPage />
+                </SecuredRoute>
+              }
+            />
+
+            <Route
+              path="/admin/events/:eventId/notification"
+              element={
+                <SecuredRoute allowedRoles={["admin"]}>
+                  <NotificationPage />
+                </SecuredRoute>
+              }
+            />
+
+            <Route
+              path="/admin/events/:eventId/status"
+              element={
+                <SecuredRoute allowedRoles={["admin"]}>
+                  <EventStatusPage />
                 </SecuredRoute>
               }
             />

@@ -58,7 +58,7 @@ function EventPage() {
       </button>
 
       <button
-        onClick={() => navigate("/token")}
+        onClick={() => navigate(`/admin/events/${eventId}/notification`)}
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full sm:w-auto"
       >
         Рассылка
@@ -76,6 +76,12 @@ function EventPage() {
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full sm:w-auto"
       >
         Сервис
+      </button>
+      <button
+        onClick={() => navigate(`/admin/events/${eventId}/status`)}
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full sm:w-auto"
+      >
+        Статус
       </button>
     </div>
   );

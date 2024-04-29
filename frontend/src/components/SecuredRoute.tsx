@@ -11,8 +11,6 @@ interface SecuredRouteProps {
 function SecuredRoute(props: SecuredRouteProps) {
   const { isLoggedIn, role, loading } = useAuth();
 
-  console.log({ isLoggedIn, role, loading });
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen text-2xl font-bold text-blue-500">

@@ -2,7 +2,8 @@ import dotenv from "dotenv";
 import { Scenes, Telegraf, session, Markup } from "telegraf";
 
 import { MyContext } from "./types/bot";
-import { subscribersCol } from "./database";
+import { eventInfoCol, subscribersCol } from "./database";
+import { ObjectId } from "mongodb";
 
 dotenv.config();
 
@@ -25,8 +26,29 @@ bot.command("start", async (ctx) => {
     });
   }
 
+  const events = await eventInfoCol
+    .find({
+      status: "active",
+    })
+    .toArray();
+
+  if (events.length === 0) {
+    ctx.reply(
+      `Привет, ${ctx.from.first_name}!\nАктивных событий на данный момент нет, но как только будет что-то известно, мы напишем тебе здесь!`
+    );
+    return;
+  }
+  // use inline keyboard to show all active events
+
+  const keyboard = Markup.inlineKeyboard(
+    events.map((event) => [
+      Markup.button.callback(event.title, `event_${event._id}`),
+    ])
+  );
+
   ctx.reply(
-    `Привет, ${ctx.from.first_name}!\nАктивных событий на данный момент нет, но как только будет что-то известно, мы напишем тебе здесь!`
+    `Привет, ${ctx.from.first_name}!\nОткрыты регистраций на:`,
+    keyboard
   );
 });
 
@@ -36,6 +58,21 @@ bot.on("message", async (ctx) => {
     Markup.removeKeyboard()
   );
 });
-// bot.launch();
+
+bot.action(/event_(.+)/, async (ctx) => {
+  // Extract the event ID from the callback data
+  const eventId = ctx.match[1];
+
+  const event = await eventInfoCol.findOne({
+    _id: new ObjectId(eventId),
+  });
+  if (event) {
+    await ctx.reply(`You selected the event: ${event.title}`);
+  } else {
+    await ctx.reply("The selected event does not exist.");
+  }
+});
+
+bot.launch();
 
 export default bot;
