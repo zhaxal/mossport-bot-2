@@ -54,7 +54,14 @@ function DrawEditForm(props: DrawEditFormProps) {
       onSubmit={drawForm.handleSubmit(onSubmit)}
     >
       <div className="mb-4">
+        <label
+          htmlFor="introMessage"
+          className="block text-gray-700 text-sm font-bold mb-2"
+        >
+          Сообщение перед розыгрышем:
+        </label>
         <input
+          id="introMessage"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           type="text"
           placeholder="Сообщение перед розыгрышем"
@@ -63,7 +70,14 @@ function DrawEditForm(props: DrawEditFormProps) {
       </div>
 
       <div className="mb-4">
+        <label
+          htmlFor="winnerNumber"
+          className="block text-gray-700 text-sm font-bold mb-2"
+        >
+          Количество победителей:
+        </label>
         <input
+          id="winnerNumber"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           type="number"
           placeholder="Количество победителей"
@@ -72,7 +86,14 @@ function DrawEditForm(props: DrawEditFormProps) {
       </div>
 
       <div className="mb-4">
+        <label
+          htmlFor="drawInterval"
+          className="block text-gray-700 text-sm font-bold mb-2"
+        >
+          Интервал между розыгрышами:
+        </label>
         <input
+          id="drawInterval"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           type="number"
           placeholder="Интервал между розыгрышами"
@@ -81,7 +102,14 @@ function DrawEditForm(props: DrawEditFormProps) {
       </div>
 
       <div className="mb-4">
+        <label
+          htmlFor="drawDuration"
+          className="block text-gray-700 text-sm font-bold mb-2"
+        >
+          Длительность розыгрыша:
+        </label>
         <input
+          id="drawDuration"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           type="number"
           placeholder="Длительность розыгрыша"
@@ -90,7 +118,14 @@ function DrawEditForm(props: DrawEditFormProps) {
       </div>
 
       <div className="mb-4">
+        <label
+          htmlFor="winnersMessage"
+          className="block text-gray-700 text-sm font-bold mb-2"
+        >
+          Сообщение победителям:
+        </label>
         <textarea
+          id="winnersMessage"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           placeholder="Сообщение победителям"
           {...drawForm.register("winnersMessage")}

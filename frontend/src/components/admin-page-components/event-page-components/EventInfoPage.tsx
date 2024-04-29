@@ -54,7 +54,14 @@ function EventEditForm(props: EventEditFormProps) {
       onSubmit={eventForm.handleSubmit(onSubmit)}
     >
       <div className="mb-4">
+        <label
+          htmlFor="title"
+          className="block text-gray-700 text-sm font-bold mb-2"
+        >
+          Название ивента:
+        </label>
         <input
+          id="title"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           type="text"
           placeholder="Название ивента"
@@ -63,7 +70,14 @@ function EventEditForm(props: EventEditFormProps) {
       </div>
 
       <div className="mb-4">
+        <label
+          htmlFor="description"
+          className="block text-gray-700 text-sm font-bold mb-2"
+        >
+          Описание:
+        </label>
         <textarea
+          id="description"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           placeholder="Описание"
           {...eventForm.register("description")}
@@ -71,7 +85,14 @@ function EventEditForm(props: EventEditFormProps) {
       </div>
 
       <div className="mb-4">
+        <label
+          htmlFor="schedule"
+          className="block text-gray-700 text-sm font-bold mb-2"
+        >
+          Расписание:
+        </label>
         <textarea
+          id="schedule"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           placeholder="Расписание"
           {...eventForm.register("schedule")}
@@ -79,7 +100,14 @@ function EventEditForm(props: EventEditFormProps) {
       </div>
 
       <div className="mb-4">
+        <label
+          htmlFor="partnerMessage"
+          className="block text-gray-700 text-sm font-bold mb-2"
+        >
+          Спонсорское сообщение:
+        </label>
         <textarea
+          id="partnerMessage"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           placeholder="Спонсорское сообщение"
           {...eventForm.register("partnerMessage")}

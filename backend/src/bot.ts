@@ -23,6 +23,7 @@ bot.command("start", async (ctx) => {
   if (!existingUser) {
     await subscribersCol.insertOne({
       telegramId: ctx.from.id,
+      name: ctx.from.first_name,
     });
   }
 
@@ -68,8 +69,10 @@ bot.action(/event_(.+)/, async (ctx) => {
   });
   if (event) {
     await ctx.reply(`You selected the event: ${event.title}`);
+    await ctx.answerCbQuery("Event selected successfully");
   } else {
     await ctx.reply("The selected event does not exist.");
+    await ctx.answerCbQuery("Failed to select event");
   }
 });
 

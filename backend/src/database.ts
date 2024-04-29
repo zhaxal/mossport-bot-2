@@ -55,12 +55,14 @@ interface DrawInfo {
   drawInterval: number;
   drawDuration: number;
   winnersMessage: string;
+  completed?: boolean;
 }
 
 export const drawInfoCol = db.collection<DrawInfo>("draw-info");
 
 interface Subscribers {
   telegramId: number;
+  name: string;
 }
 
 export const subscribersCol = db.collection<Subscribers>("subscribers");

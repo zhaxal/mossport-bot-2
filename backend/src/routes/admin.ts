@@ -14,6 +14,7 @@ import {
   bucket,
   tokenCol,
   drawInfoCol,
+  subscribersCol,
 } from "../database";
 
 dotenv.config();
@@ -172,10 +173,12 @@ adminRouter.post("/event/:eventId/notification", async (req, res) => {
     .find({ eventId: new ObjectId(eventId) })
     .toArray();
 
-  users.forEach((user) => {
-    bot.telegram.sendMessage(user.userId, message, {
-      parse_mode: "HTML",
-    });
+  const subscribers = await subscribersCol
+    .find({ _id: { $in: users.map((user) => user.subscriberId) } })
+    .toArray();
+
+  subscribers.forEach((subscriber) => {
+    bot.telegram.sendMessage(subscriber.telegramId, message);
   });
 
   res.send("Notification sent");
@@ -193,6 +196,32 @@ adminRouter.patch("/event/:eventId/status", async (req, res) => {
     { _id: new ObjectId(eventId) },
     { $set: { status } }
   );
+
+  if (status === "active") {
+    const event = await eventInfoCol.findOne({ _id: new ObjectId(eventId) });
+    if (!event) return;
+
+    const subscribers = await subscribersCol.find().toArray();
+
+    for (const subscriber of subscribers) {
+      await bot.telegram.sendMessage(
+        subscriber.telegramId,
+        `Привет, ${subscriber.name}!\nОткрыта регистрация на ${event.title}!\nВперед!`
+      );
+
+      await bot.telegram.sendMessage(
+        subscriber.telegramId,
+        `${event.description}`,
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "Участвовать", callback_data: `event_${event._id}` }],
+            ],
+          },
+        }
+      );
+    }
+  }
 
   res.send("Event status updated");
 });
@@ -231,6 +260,67 @@ adminRouter.patch("/event/:eventId/draw", async (req, res) => {
   );
 
   res.send("Draw info updated");
+});
+
+async function selectWinners(eventId: string, numberOfWinners: number) {
+  const participants = await userCol
+    .find({ eventId: new ObjectId(eventId) })
+    .toArray();
+
+  for (let i = participants.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [participants[i], participants[j]] = [participants[j], participants[i]];
+  }
+
+  const winners = participants.slice(0, numberOfWinners);
+
+  return winners;
+}
+
+adminRouter.get("/event/:eventId/draw/start", async (req, res) => {
+  if (req.headers.authorization !== adminToken) {
+    return res.status(401).send("Unauthorized");
+  }
+
+  const eventId = req.params.eventId;
+
+  const draw = await drawInfoCol.findOne({ eventId: new ObjectId(eventId) });
+
+  if (!draw) {
+    return res.status(404).send("Draw info not found");
+  }
+
+  const drawInterval = draw.drawInterval;
+  const numberOfDraws = draw.drawDuration;
+  const numberOfWinners = draw.winnerNumber;
+
+  // Start the draw
+  let drawCount = 0;
+  const drawIntervalId = setInterval(async () => {
+    const winners = await selectWinners(eventId, numberOfWinners);
+
+    const subscribers = await subscribersCol
+      .find({
+        _id: { $in: winners.map((winner) => winner.subscriberId) },
+      })
+      .toArray();
+
+    subscribers.forEach((s) => {
+      bot.telegram.sendMessage(s.telegramId, draw.winnersMessage);
+    });
+
+    drawCount++;
+    if (drawCount >= numberOfDraws) {
+      clearInterval(drawIntervalId);
+    }
+  }, drawInterval * 60 * 60 * 1000);
+
+  await drawInfoCol.updateOne(
+    { eventId: new ObjectId(eventId) },
+    { $set: { completed: true } }
+  );
+
+  res.send("Draw started");
 });
 
 export default adminRouter;
