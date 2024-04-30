@@ -3,13 +3,16 @@ import { AuthProvider } from "./contexts/AuthContext";
 import HomePage from "./components/HomePage";
 import LoginPage from "./components/LoginPage";
 import SecuredRoute from "./components/SecuredRoute";
+import OtherPage from "./components/admin-page-components/OtherPage";
 import AdminPage from "./components/admin-page-components/AdminPage";
 import TokenPage from "./components/admin-page-components/TokenPage";
+import AnnouncePage from "./components/admin-page-components/AnnouncePage";
 import EventListPage from "./components/admin-page-components/EventListPage";
 import OperatorPage from "./components/operator-page-components/OperatorPage";
 import FindUserPage from "./components/operator-page-components/FindUserPage";
 import EventCreatePage from "./components/admin-page-components/EventCreatePage";
 import EventPage from "./components/admin-page-components/event-page-components/EventPage";
+import ServicePage from "./components/admin-page-components/event-page-components/ServicePage";
 import EventInfoPage from "./components/admin-page-components/event-page-components/EventInfoPage";
 import EventStatusPage from "./components/admin-page-components/event-page-components/EventStatusPage";
 import NotificationPage from "./components/admin-page-components/event-page-components/NotificationPage";
@@ -46,6 +49,24 @@ function App() {
               element={
                 <SecuredRoute allowedRoles={["admin"]}>
                   <TokenPage />
+                </SecuredRoute>
+              }
+            />
+
+            <Route
+              path="/admin/other"
+              element={
+                <SecuredRoute allowedRoles={["admin"]}>
+                  <OtherPage />
+                </SecuredRoute>
+              }
+            />
+
+            <Route
+              path="/admin/announce"
+              element={
+                <SecuredRoute allowedRoles={["admin"]}>
+                  <AnnouncePage />
                 </SecuredRoute>
               }
             />
@@ -116,6 +137,15 @@ function App() {
               element={
                 <SecuredRoute allowedRoles={["admin"]}>
                   <EventFileUploadPage />
+                </SecuredRoute>
+              }
+            />
+
+            <Route
+              path="/admin/events/:eventId/service"
+              element={
+                <SecuredRoute allowedRoles={["admin"]}>
+                  <ServicePage />
                 </SecuredRoute>
               }
             />

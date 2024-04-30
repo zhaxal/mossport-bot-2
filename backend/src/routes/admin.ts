@@ -15,6 +15,7 @@ import {
   tokenCol,
   drawInfoCol,
   subscribersCol,
+  userPrizeStatusCol,
 } from "../database";
 import drawQueue from "../drawQueue";
 
@@ -299,6 +300,108 @@ adminRouter.get("/event/:eventId/draw/start", async (req, res) => {
   );
 
   res.send("Draw started");
+});
+
+adminRouter.get("/event/:eventId/csv", async (req, res) => {
+  if (req.headers.authorization !== adminToken) {
+    return res.status(401).send("Unauthorized");
+  }
+
+  const eventId = req.params.eventId;
+
+  const users = await userCol
+    .find({ eventId: new ObjectId(eventId) })
+    .toArray();
+
+  interface UserCSV {
+    num: number;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    winner: boolean;
+    prizeClaimed: boolean;
+  }
+
+  const usersCSV: UserCSV[] = [];
+
+  for (const user of users) {
+    const prizeStatus = await userPrizeStatusCol.findOne({
+      shortId: user.shortId,
+      eventId: user.eventId,
+    });
+
+    usersCSV.push({
+      num: usersCSV.length + 1,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      winner: !!prizeStatus,
+      prizeClaimed: prizeStatus?.claimed || false,
+    });
+  }
+
+  const csvData = json2csv.parse(usersCSV);
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=users.csv");
+
+  res.send(csvData);
+});
+
+adminRouter.get("/csv", async (req, res) => {
+  if (req.headers.authorization !== adminToken) {
+    return res.status(401).send("Unauthorized");
+  }
+
+  const users = await userCol
+    .aggregate([
+      {
+        $group: {
+          _id: "$subscriberId",
+          doc: {
+            $first: "$$ROOT",
+          },
+        },
+      },
+      {
+        $replaceRoot: {
+          newRoot: "$doc",
+        },
+      },
+    ])
+    .toArray();
+
+  const usersCSV = users.map((user, i) => ({
+    num: i + 1,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phoneNumber: user.phoneNumber,
+  }));
+
+  const csvData = json2csv.parse(usersCSV);
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=users.csv");
+
+  res.send(csvData);
+});
+
+adminRouter.post("/announce", async (req, res) => {
+  if (req.headers.authorization !== adminToken) {
+    return res.status(401).send("Unauthorized");
+  }
+
+  const { message, image } = req.body;
+
+  const subscribers = await subscribersCol.find().toArray();
+
+  for (const subscriber of subscribers) {
+    await bot.telegram.sendMessage(subscriber.telegramId, message);
+    if (image) {
+      await bot.telegram.sendPhoto(subscriber.telegramId, image);
+    }
+  }
+  res.send("Announcement sent");
 });
 
 export default adminRouter;

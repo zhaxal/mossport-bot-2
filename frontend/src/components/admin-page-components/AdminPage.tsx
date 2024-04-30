@@ -16,7 +16,7 @@ function AdminPage() {
         Список ивентов
       </button>
       <button
-        onClick={() => navigate("/activity")}
+        onClick={() => navigate("/admin/other")}
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full sm:w-auto"
       >
         Прочее
