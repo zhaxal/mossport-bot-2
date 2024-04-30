@@ -40,7 +40,7 @@ interface Token {
 export const tokenCol = db.collection<Token>("token");
 
 interface UserPrizeStatus {
-  userId: number;
+  shortId: number;
   eventId: ObjectId;
   claimed: boolean;
 }

@@ -1,9 +1,13 @@
 import dotenv from "dotenv";
+
+import { ObjectId } from "mongodb";
 import { Scenes, Telegraf, session, Markup } from "telegraf";
 
 import { MyContext } from "./types/bot";
 import { eventInfoCol, subscribersCol } from "./database";
-import { ObjectId } from "mongodb";
+
+import { mainMenuWizard } from "./scenes/mainMenu";
+import { eventRegistrationWizard } from "./scenes/eventRegistration";
 
 dotenv.config();
 
@@ -11,7 +15,11 @@ const botToken = process.env.BOT_TOKEN || "";
 
 const bot = new Telegraf<MyContext>(botToken);
 
-const stage = new Scenes.Stage<MyContext>([]);
+const stage = new Scenes.Stage<MyContext>([
+  eventRegistrationWizard,
+  mainMenuWizard,
+]);
+
 bot.use(session());
 bot.use(stage.middleware());
 
@@ -39,7 +47,6 @@ bot.command("start", async (ctx) => {
     );
     return;
   }
-  // use inline keyboard to show all active events
 
   const keyboard = Markup.inlineKeyboard(
     events.map((event) => [
@@ -61,18 +68,21 @@ bot.on("message", async (ctx) => {
 });
 
 bot.action(/event_(.+)/, async (ctx) => {
-  // Extract the event ID from the callback data
   const eventId = ctx.match[1];
 
   const event = await eventInfoCol.findOne({
     _id: new ObjectId(eventId),
   });
+
   if (event) {
-    await ctx.reply(`You selected the event: ${event.title}`);
-    await ctx.answerCbQuery("Event selected successfully");
+    await ctx.answerCbQuery("Выбран ивент.");
+    await ctx.scene.enter("eventRegistrationWizard", {
+      eventId: event._id.toString(),
+    });
+    await ctx.deleteMessage();
   } else {
-    await ctx.reply("The selected event does not exist.");
-    await ctx.answerCbQuery("Failed to select event");
+    await ctx.answerCbQuery("Не удалось выбрать ивент.");
+    await ctx.reply("Ивент не найден. Попробуйте другой ивент.");
   }
 });
 

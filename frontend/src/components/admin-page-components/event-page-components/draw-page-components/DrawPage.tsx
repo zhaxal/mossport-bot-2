@@ -1,9 +1,10 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import backendInstance from "../../../../utils/backendInstance";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+
+import backendInstance from "../../../../utils/backendInstance";
 
 interface Draw {
   introMessage: string;
@@ -11,6 +12,7 @@ interface Draw {
   drawInterval: number;
   drawDuration: number;
   winnersMessage: string;
+  completed?: boolean;
 }
 
 interface DrawEditFormProps {
@@ -159,6 +161,26 @@ function DrawPage() {
     enabled: !!eventId,
   });
 
+  const queryClinet = useQueryClient();
+
+  const drawStartMutation = useMutation({
+    mutationKey: ["draw-activate", eventId],
+    mutationFn: async () => {
+      const adminToken = localStorage.getItem("adminToken");
+
+      await backendInstance.get(`/admin/event/${eventId}/draw/start`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: adminToken,
+        },
+      });
+
+      queryClinet.invalidateQueries({
+        queryKey: ["draw", eventId],
+      });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen text-2xl font-bold text-blue-500">
@@ -271,6 +293,15 @@ function DrawPage() {
             )}
           </div>
         </>
+      )}
+
+      {!data?.completed && data && (
+        <button
+          onClick={() => drawStartMutation.mutate()}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Начать розыгрыш
+        </button>
       )}
     </div>
   );

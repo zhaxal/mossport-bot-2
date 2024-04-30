@@ -16,6 +16,7 @@ import {
   drawInfoCol,
   subscribersCol,
 } from "../database";
+import drawQueue from "../drawQueue";
 
 dotenv.config();
 
@@ -262,21 +263,6 @@ adminRouter.patch("/event/:eventId/draw", async (req, res) => {
   res.send("Draw info updated");
 });
 
-async function selectWinners(eventId: string, numberOfWinners: number) {
-  const participants = await userCol
-    .find({ eventId: new ObjectId(eventId) })
-    .toArray();
-
-  for (let i = participants.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [participants[i], participants[j]] = [participants[j], participants[i]];
-  }
-
-  const winners = participants.slice(0, numberOfWinners);
-
-  return winners;
-}
-
 adminRouter.get("/event/:eventId/draw/start", async (req, res) => {
   if (req.headers.authorization !== adminToken) {
     return res.status(401).send("Unauthorized");
@@ -294,26 +280,18 @@ adminRouter.get("/event/:eventId/draw/start", async (req, res) => {
   const numberOfDraws = draw.drawDuration;
   const numberOfWinners = draw.winnerNumber;
 
-  // Start the draw
-  let drawCount = 0;
-  const drawIntervalId = setInterval(async () => {
-    const winners = await selectWinners(eventId, numberOfWinners);
-
-    const subscribers = await subscribersCol
-      .find({
-        _id: { $in: winners.map((winner) => winner.subscriberId) },
-      })
-      .toArray();
-
-    subscribers.forEach((s) => {
-      bot.telegram.sendMessage(s.telegramId, draw.winnersMessage);
-    });
-
-    drawCount++;
-    if (drawCount >= numberOfDraws) {
-      clearInterval(drawIntervalId);
-    }
-  }, drawInterval * 60 * 60 * 1000);
+  for (let i = 0; i < numberOfDraws; i++) {
+    drawQueue.add(
+      {
+        eventId,
+        numberOfWinners,
+        winnersMessage: draw.winnersMessage,
+      },
+      {
+        delay: drawInterval * 60 * 60 * 1000 * i,
+      }
+    );
+  }
 
   await drawInfoCol.updateOne(
     { eventId: new ObjectId(eventId) },

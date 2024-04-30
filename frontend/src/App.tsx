@@ -7,6 +7,7 @@ import AdminPage from "./components/admin-page-components/AdminPage";
 import TokenPage from "./components/admin-page-components/TokenPage";
 import EventListPage from "./components/admin-page-components/EventListPage";
 import OperatorPage from "./components/operator-page-components/OperatorPage";
+import FindUserPage from "./components/operator-page-components/FindUserPage";
 import EventCreatePage from "./components/admin-page-components/EventCreatePage";
 import EventPage from "./components/admin-page-components/event-page-components/EventPage";
 import EventInfoPage from "./components/admin-page-components/event-page-components/EventInfoPage";
@@ -126,6 +127,15 @@ function App() {
               element={
                 <SecuredRoute allowedRoles={["admin", "operator"]}>
                   <OperatorPage />
+                </SecuredRoute>
+              }
+            />
+
+            <Route
+              path="/operator/find"
+              element={
+                <SecuredRoute allowedRoles={["admin", "operator"]}>
+                  <FindUserPage />
                 </SecuredRoute>
               }
             />

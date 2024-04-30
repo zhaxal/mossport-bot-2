@@ -26,7 +26,9 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
     });
 
     if (user) {
-      ctx.scene.enter("mainMenuWizard");
+      ctx.scene.enter("mainMenuWizard", {
+        eventId,
+      });
       return;
     }
 
@@ -61,7 +63,10 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
   async (ctx) => {
     if (ctx.message && "contact" in ctx.message) {
       ctx.wizard.state.phoneNumber = ctx.message.contact.phone_number;
-      ctx.reply("Прочти условия участия и Политику конфиденциальности");
+      await ctx.reply(
+        "Прочти условия участия и Политику конфиденциальности",
+        Markup.removeKeyboard()
+      );
 
       const eventId = ctx.wizard.state.eventId;
 
@@ -70,18 +75,18 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
       });
 
       if (event?.rulesLink) {
-        ctx.replyWithDocument(`${hostname}${event.rulesLink}`);
+        await ctx.replyWithDocument(`${hostname}${event.rulesLink}`);
       } else {
-        ctx.reply("Правил участия пока нет.");
+        await ctx.reply("Правил участия пока нет.");
       }
 
       if (event?.policyLink) {
-        ctx.replyWithDocument(`${hostname}${event.policyLink}`);
+        await ctx.replyWithDocument(`${hostname}${event.policyLink}`);
       } else {
-        ctx.reply("Политики конфиденциальности пока нет.");
+        await ctx.reply("Политики конфиденциальности пока нет.");
       }
 
-      ctx.reply(
+      await ctx.reply(
         "Нажатие на Кнопку Регистрации будет означать, что ты прочел их и согласен",
         Markup.inlineKeyboard([
           Markup.button.callback("Регистрация", "confirm"),
@@ -89,62 +94,94 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
         ])
       );
 
-      return ctx.scene.leave();
+      return ctx.wizard.next();
     } else {
       ctx.reply("Пожалуйста, отправь контакт.");
     }
-  }
+  },
+  async (ctx) => {}
 );
 
 eventRegistrationWizard.action("confirm", async (ctx) => {
-  const { firstName, lastName, phoneNumber, eventId } = ctx.wizard.state;
+  try {
+    const { firstName, lastName, phoneNumber, eventId } = ctx.wizard.state;
+    const userId = ctx.from?.id;
 
-  const userId = ctx.from?.id;
+    const subscriber = await subscribersCol.findOne({
+      telegramId: userId,
+    });
 
-  const subscriber = await subscribersCol.findOne({
-    telegramId: userId,
-  });
+    if (!subscriber) {
+      await ctx.reply(
+        "Произошла ошибка. Пожалуйста, начните с команды /start."
+      );
+      return ctx.scene.leave();
+    }
 
-  if (!subscriber) {
-    ctx.reply("Произошла ошибка. Пожалуйста, начните с команды /start.");
-    return ctx.scene.leave();
+    const shortId = await randomNumber(100000, 999999);
+
+    if (!firstName || !lastName || !phoneNumber || !eventId) {
+      await ctx.reply(
+        "Произошла ошибка. Пожалуйста, начните с команды /start."
+      );
+      return ctx.scene.leave();
+    }
+
+    await userCol.insertOne({
+      subscriberId: subscriber._id,
+      firstName,
+      lastName,
+      phoneNumber,
+      shortId,
+      eventId: new ObjectId(eventId),
+    });
+
+    const event = await eventInfoCol.findOne({
+      _id: new ObjectId(eventId),
+    });
+
+    if (!event) {
+      await ctx.reply(
+        "Произошла ошибка. Пожалуйста, начните с команды /start."
+      );
+      await ctx.answerCbQuery("Ошибка при регистраций.");
+      return ctx.scene.leave();
+    }
+
+    await ctx.reply(`Расписание мероприятия:\n\n${event?.schedule}`);
+
+    if (event?.mapLink) {
+      await ctx.reply(`И не забудь карту!`);
+      await ctx.replyWithDocument(`${hostname}${event.mapLink}`);
+    }
+
+    await ctx.reply(
+      "Карту, расписание, свой прогресс, условия участия и политику конфиденциальности ты всегда сможешь найти в меню."
+    );
+
+    if (event.partnerMessage) await ctx.reply(event.partnerMessage);
+
+    await ctx.answerCbQuery("Регистрация завершена.");
+
+    await ctx.editMessageReplyMarkup({
+      inline_keyboard: [],
+    });
+
+    ctx.scene.enter("mainMenuWizard", {
+      eventId: event._id.toString(),
+    });
+  } catch (error) {
+    console.error(error);
+    ctx.answerCbQuery("Произошла ошибка. Пожалуйста, попробуйте позже.");
   }
-
-  const shortId = await randomNumber(100000, 999999);
-
-  if (!firstName || !lastName || !phoneNumber || !eventId) {
-    ctx.reply("Произошла ошибка. Пожалуйста, начните с команды /start.");
-    return ctx.scene.leave();
-  }
-
-  await userCol.insertOne({
-    subscriberId: subscriber._id,
-    firstName,
-    lastName,
-    phoneNumber,
-    shortId,
-    eventId: new ObjectId(eventId),
-  });
-
-  const event = await eventInfoCol.findOne({
-    _id: new ObjectId(eventId),
-  });
-
-  ctx.reply(`Расписание мероприятия:\n\n${event?.schedule}`);
-
-  if (event?.mapLink) {
-    ctx.reply(`И не забудь карту!`);
-    ctx.replyWithDocument(`${hostname}${event.mapLink}`);
-  }
-
-  ctx.reply(
-    "Карту, расписание, свой прогресс, условия участия и политику конфиденциальности ты всегда сможешь найти в меню."
-  );
-
-  ctx.scene.enter("mainMenuWizard");
 });
 
 eventRegistrationWizard.action("cancel", async (ctx) => {
-  ctx.reply("Регистрация отменена.");
+  ctx.answerCbQuery("Регистрация отменена.");
+
+  await ctx.editMessageReplyMarkup({
+    inline_keyboard: [],
+  });
+
   return ctx.scene.leave();
 });
