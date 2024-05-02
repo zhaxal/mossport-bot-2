@@ -1,4 +1,5 @@
 import Queue from "bull";
+import dotenv from "dotenv";
 import { ObjectId } from "mongodb";
 
 import {
@@ -9,7 +10,14 @@ import {
 } from "./database";
 import bot from "./bot";
 
-const drawQueue = new Queue("draw");
+dotenv.config();
+
+const drawQueue = new Queue("draw", {
+  redis: process.env.REDIS_URL || {
+    host: "localhost",
+    port: 6379,
+  },
+});
 
 async function selectWinners(eventId: string, numberOfWinners: number) {
   const participants = await userCol

@@ -59,6 +59,7 @@ function FileUploadButton(props: FileUploadButtonProps) {
           ref={fileInput}
           className="hidden"
           onChange={handleFileUpload}
+          accept=".jpg,.jpeg,.png,.gif,.pdf"
         />
       </label>
 

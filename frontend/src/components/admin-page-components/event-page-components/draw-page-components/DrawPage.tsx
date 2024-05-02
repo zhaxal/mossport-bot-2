@@ -1,16 +1,18 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import * as yup from "yup";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
 
 import backendInstance from "../../../../utils/backendInstance";
 
 interface Draw {
   introMessage: string;
-  winnerNumber: number;
-  drawInterval: number;
-  drawDuration: number;
+  winnerNumber?: number | null;
+  drawInterval?: number | null;
+  drawDuration?: number | null;
   winnersMessage: string;
   completed?: boolean;
 }
@@ -20,16 +22,48 @@ interface DrawEditFormProps {
   exitForm: () => void;
 }
 
+const schema = yup.object().shape({
+  introMessage: yup
+    .string()
+    .required("Сообщение перед розыгрышем обязательно для заполнения"),
+  winnerNumber: yup
+    .number()
+    .nullable()
+    .transform((value) => {
+      return value === "" ? null : value;
+    })
+    .required("Количество победителей обязательно для заполнения"),
+  drawInterval: yup
+    .number()
+    .nullable()
+    .transform((value) => {
+      return value === "" ? null : value;
+    })
+    .required("Интервал между розыгрышами обязателен для заполнения"),
+  drawDuration: yup
+    .number()
+    .nullable()
+    .transform((value) => {
+      return value === "" ? null : value;
+    })
+    .required("Длительность розыгрыша обязательна для заполнения"),
+  winnersMessage: yup
+    .string()
+    .required("Сообщение победителям обязательно для заполнения"),
+  completed: yup.boolean(),
+});
+
 function DrawEditForm(props: DrawEditFormProps) {
   const { eventId } = useParams();
   const { draw, exitForm } = props;
 
   const drawForm = useForm<Draw>({
+    resolver: yupResolver<Draw>(schema),
     defaultValues: {
       introMessage: draw?.introMessage || "",
-      winnerNumber: draw?.winnerNumber || 1,
-      drawInterval: draw?.drawInterval || 1,
-      drawDuration: draw?.drawDuration || 1,
+      winnerNumber: draw?.winnerNumber || null,
+      drawInterval: draw?.drawInterval || null,
+      drawDuration: draw?.drawDuration || null,
       winnersMessage: draw?.winnersMessage || "",
     },
   });
@@ -69,6 +103,11 @@ function DrawEditForm(props: DrawEditFormProps) {
           placeholder="Сообщение перед розыгрышем"
           {...drawForm.register("introMessage")}
         />
+        {drawForm.formState.errors.introMessage && (
+          <p className="text-red-500 text-xs italic">
+            {drawForm.formState.errors.introMessage.message}
+          </p>
+        )}
       </div>
 
       <div className="mb-4">
@@ -81,10 +120,14 @@ function DrawEditForm(props: DrawEditFormProps) {
         <input
           id="winnerNumber"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          type="number"
           placeholder="Количество победителей"
           {...drawForm.register("winnerNumber")}
         />
+        {drawForm.formState.errors.winnerNumber && (
+          <p className="text-red-500 text-xs italic">
+            {drawForm.formState.errors.winnerNumber.message}
+          </p>
+        )}
       </div>
 
       <div className="mb-4">
@@ -97,10 +140,14 @@ function DrawEditForm(props: DrawEditFormProps) {
         <input
           id="drawInterval"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          type="number"
           placeholder="Интервал между розыгрышами"
           {...drawForm.register("drawInterval")}
         />
+        {drawForm.formState.errors.drawInterval && (
+          <p className="text-red-500 text-xs italic">
+            {drawForm.formState.errors.drawInterval.message}
+          </p>
+        )}
       </div>
 
       <div className="mb-4">
@@ -113,10 +160,14 @@ function DrawEditForm(props: DrawEditFormProps) {
         <input
           id="drawDuration"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          type="number"
           placeholder="Длительность розыгрыша"
           {...drawForm.register("drawDuration")}
         />
+        {drawForm.formState.errors.drawDuration && (
+          <p className="text-red-500 text-xs italic">
+            {drawForm.formState.errors.drawDuration.message}
+          </p>
+        )}
       </div>
 
       <div className="mb-4">
@@ -132,6 +183,11 @@ function DrawEditForm(props: DrawEditFormProps) {
           placeholder="Сообщение победителям"
           {...drawForm.register("winnersMessage")}
         ></textarea>
+        {drawForm.formState.errors.winnersMessage && (
+          <p className="text-red-500 text-xs italic">
+            {drawForm.formState.errors.winnersMessage.message}
+          </p>
+        )}
       </div>
 
       <button
