@@ -67,7 +67,7 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
       switch (ctx.message.text) {
         case "🔢 Мой код":
           ctx.reply(
-            `Твой секретный код - покажи его Инструктору на площадке после прохождения, чтобы получить балл: ${user.shortId}`
+            `Твой секретный код: ${user.shortId}`
           );
           break;
         case "🗺️ Карта":
@@ -119,7 +119,7 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
           );
 
           await ctx.reply(
-            `Привет, ${ctx.from?.first_name}!\nОткрыты регистраций на:`,
+            `Привет, ${ctx.from?.first_name}!\nОткрыты регистрации на:`,
             keyboard
           );
 

@@ -55,7 +55,7 @@ bot.command("start", async (ctx) => {
   );
 
   ctx.reply(
-    `Привет, ${ctx.from.first_name}!\nОткрыты регистраций на:`,
+    `Привет, ${ctx.from.first_name}!\nОткрыты регистрации на:`,
     keyboard
   );
 });

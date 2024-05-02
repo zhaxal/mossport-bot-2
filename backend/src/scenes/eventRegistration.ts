@@ -156,7 +156,7 @@ eventRegistrationWizard.action("confirm", async (ctx) => {
     }
 
     await ctx.reply(
-      "Карту, расписание, свой прогресс, условия участия и политику конфиденциальности ты всегда сможешь найти в меню."
+      "Карту, расписание, условия участия и политику конфиденциальности ты всегда сможешь найти в меню."
     );
 
     if (event.partnerMessage) await ctx.reply(event.partnerMessage);

@@ -302,6 +302,45 @@ adminRouter.get("/event/:eventId/draw/start", async (req, res) => {
   res.send("Draw started");
 });
 
+adminRouter.get("/event/:eventId/draw/winner", async (req, res) => {
+  if (req.headers.authorization !== adminToken) {
+    return res.status(401).send("Unauthorized");
+  }
+
+  const eventId = req.params.eventId;
+
+  const winnersIds = await userPrizeStatusCol
+    .find({ eventId: new ObjectId(eventId) })
+    .toArray();
+
+  interface WinnersInfo {
+    firstName: string;
+    lastName: string;
+    shortId: number;
+    prizeClaimed: boolean;
+  }
+
+  const winnersInfo: WinnersInfo[] = [];
+
+  for (const winner of winnersIds) {
+    const user = await userCol.findOne({
+      shortId: winner.shortId,
+      eventId: new ObjectId(eventId),
+    });
+
+    if (user) {
+      winnersInfo.push({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        shortId: user.shortId,
+        prizeClaimed: winner.claimed,
+      });
+    }
+  }
+
+  res.send(winnersInfo);
+});
+
 adminRouter.get("/event/:eventId/csv", async (req, res) => {
   if (req.headers.authorization !== adminToken) {
     return res.status(401).send("Unauthorized");
