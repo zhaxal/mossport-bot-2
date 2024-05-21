@@ -226,7 +226,7 @@ function WinnersTable() {
     enabled: !!eventId,
   });
 
-  console.log(data);
+
 
   if (isLoading) {
     return null;
