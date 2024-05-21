@@ -11,6 +11,7 @@ interface Event {
   description?: string;
   schedule?: string;
   partnerMessage?: string;
+  partnerMessage2?: string;
 }
 
 interface EventEditFormProps {
@@ -28,6 +29,7 @@ function EventEditForm(props: EventEditFormProps) {
       description: event?.description || "",
       schedule: event?.schedule || "",
       partnerMessage: event?.partnerMessage || "",
+      partnerMessage2: event?.partnerMessage2 || "",
     },
   });
 
@@ -111,6 +113,21 @@ function EventEditForm(props: EventEditFormProps) {
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           placeholder="Спонсорское сообщение"
           {...eventForm.register("partnerMessage")}
+        ></textarea>
+      </div>
+
+      <div className="mb-4">
+        <label
+          htmlFor="partnerMessage2"
+          className="block text-gray-700 text-sm font-bold mb-2"
+        >
+          Спонсорское сообщение 2:
+        </label>
+        <textarea
+          id="partnerMessage2"
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          placeholder="Спонсорское сообщение 2"
+          {...eventForm.register("partnerMessage2")}
         ></textarea>
       </div>
 
@@ -214,6 +231,12 @@ function EventInfoPage() {
           <div className="bg-gray-200 p-2 rounded overflow-auto">
             <span className="font-bold text-lg">Спонсорское сообщение:</span>{" "}
             {data?.partnerMessage}
+          </div>
+        )}
+        {data?.partnerMessage2 && (
+          <div className="bg-gray-200 p-2 rounded overflow-auto">
+            <span className="font-bold text-lg">Спонсорское сообщение 2:</span>{" "}
+            {data?.partnerMessage2}
           </div>
         )}
       </div>

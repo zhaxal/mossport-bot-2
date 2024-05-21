@@ -164,7 +164,11 @@ eventRegistrationWizard.action("confirm", async (ctx) => {
     );
     await delay(5000);
 
-    if (event.partnerMessage) await ctx.reply(event.partnerMessage);
+    if (event.partnerMessage) {
+      await ctx.reply(event.partnerMessage);
+      await delay(5000);
+    }
+    if (event.partnerMessage2) await ctx.reply(event.partnerMessage2);
 
     await ctx.answerCbQuery("Регистрация завершена.");
 

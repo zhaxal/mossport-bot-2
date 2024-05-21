@@ -12,6 +12,7 @@ interface EventInfo {
   description?: string;
   schedule?: string;
   partnerMessage?: string;
+  partnerMessage2?: string;
   mapLink?: string;
   rulesLink?: string;
   policyLink?: string;
