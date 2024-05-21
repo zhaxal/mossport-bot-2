@@ -280,8 +280,21 @@ adminRouter.get("/event/:eventId/draw/start", async (req, res) => {
   const drawInterval = draw.drawInterval;
   const numberOfDraws = draw.drawDuration;
   const numberOfWinners = draw.winnerNumber;
+  const introMessage = draw.introMessage;
 
-  for (let i = 0; i < numberOfDraws; i++) {
+  const users = await userCol
+    .find({ eventId: new ObjectId(eventId) })
+    .toArray();
+
+  const subscribers = await subscribersCol
+    .find({ _id: { $in: users.map((user) => user.subscriberId) } })
+    .toArray();
+
+  for (const subscriber of subscribers) {
+    await bot.telegram.sendMessage(subscriber.telegramId, introMessage);
+  }
+
+  for (let i = 1; i <= numberOfDraws; i++) {
     drawQueue.add(
       {
         eventId,
@@ -302,7 +315,7 @@ adminRouter.get("/event/:eventId/draw/start", async (req, res) => {
   res.send("Draw started");
 });
 
-adminRouter.get("/event/:eventId/draw/winner", async (req, res) => {
+adminRouter.get("/event/:eventId/draw/winners", async (req, res) => {
   if (req.headers.authorization !== adminToken) {
     return res.status(401).send("Unauthorized");
   }

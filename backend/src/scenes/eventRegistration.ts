@@ -5,6 +5,7 @@ import randomNumber from "random-number-csprng";
 
 import { MyContext } from "../types/bot";
 import { eventInfoCol, subscribersCol, userCol } from "../database";
+import delay from "../utils/delay";
 
 dotenv.config();
 
@@ -150,14 +151,18 @@ eventRegistrationWizard.action("confirm", async (ctx) => {
 
     await ctx.reply(`Расписание мероприятия:\n\n${event?.schedule}`);
 
+    await delay(5000);
+
     if (event?.mapLink) {
       await ctx.reply(`И не забудь карту!`);
       await ctx.replyWithDocument(`${hostname}${event.mapLink}`);
+      await delay(5000);
     }
 
     await ctx.reply(
       "Карту, расписание, условия участия и политику конфиденциальности ты всегда сможешь найти в меню."
     );
+    await delay(5000);
 
     if (event.partnerMessage) await ctx.reply(event.partnerMessage);
 

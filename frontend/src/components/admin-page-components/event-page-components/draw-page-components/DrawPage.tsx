@@ -200,6 +200,74 @@ function DrawEditForm(props: DrawEditFormProps) {
   );
 }
 
+interface WinnersInfo {
+  firstName: string;
+  lastName: string;
+  shortId: number;
+  prizeClaimed: boolean;
+}
+
+function WinnersTable() {
+  const { eventId } = useParams();
+
+  const { data, isLoading } = useQuery<WinnersInfo[]>({
+    queryKey: ["winners", eventId],
+    queryFn: async () => {
+      const { data } = await backendInstance.get(
+        `/admin/event/${eventId}/draw/winners`,
+        {
+          headers: {
+            Authorization: localStorage.getItem("adminToken"),
+          },
+        }
+      );
+      return data;
+    },
+    enabled: !!eventId,
+  });
+
+  console.log(data);
+
+  if (isLoading) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center">
+      <h1 className="text-3xl font-bold">Победители</h1>
+
+      <table className="table-auto border-collapse border border-blue-500">
+        <thead>
+          <tr>
+            <th className="border border-blue-500 px-4 py-2">Имя</th>
+            <th className="border border-blue-500 px-4 py-2">Фамилия</th>
+            <th className="border border-blue-500 px-4 py-2">Номер</th>
+            <th className="border border-blue-500 px-4 py-2">Приз получен</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data?.map((winner) => (
+            <tr key={winner.shortId}>
+              <td className="border border-blue-500 px-4 py-2">
+                {winner.firstName}
+              </td>
+              <td className="border border-blue-500 px-4 py-2">
+                {winner.lastName}
+              </td>
+              <td className="border border-blue-500 px-4 py-2">
+                {winner.shortId}
+              </td>
+              <td className="border border-blue-500 px-4 py-2">
+                {winner.prizeClaimed ? "Да" : "Нет"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function DrawPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
@@ -358,6 +426,12 @@ function DrawPage() {
         >
           Начать розыгрыш
         </button>
+      )}
+
+      {data?.completed && (
+        <div className="bg-green-200 p-2 rounded">
+          <WinnersTable />
+        </div>
       )}
     </div>
   );
