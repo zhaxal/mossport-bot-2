@@ -67,3 +67,11 @@ interface Subscribers {
 }
 
 export const subscribersCol = db.collection<Subscribers>("subscribers");
+
+interface LogMessage {
+  eventName: string;
+  data: any;
+  timestamp: Date;
+}
+
+export const logMessagesCol = db.collection<LogMessage>("log-messages");

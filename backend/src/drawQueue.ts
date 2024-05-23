@@ -2,13 +2,10 @@ import Queue from "bull";
 import dotenv from "dotenv";
 import { ObjectId } from "mongodb";
 
-import {
-  userCol,
-  drawInfoCol,
-  subscribersCol,
-  userPrizeStatusCol,
-} from "./database";
+import { userCol, subscribersCol, userPrizeStatusCol } from "./database";
 import bot from "./bot";
+
+import logEvent from "./utils/logger";
 
 dotenv.config();
 
@@ -37,7 +34,15 @@ async function selectWinners(eventId: string, numberOfWinners: number) {
 drawQueue.process(async (job) => {
   const { eventId, numberOfWinners, winnersMessage } = job.data;
 
+  await logEvent("Job processing started", {
+    jobId: job.id,
+    eventId,
+    numberOfWinners,
+  });
+
   const winners = await selectWinners(eventId, numberOfWinners);
+
+  await logEvent("Winners selected", { jobId: job.id, winners });
 
   const subscribers = await subscribersCol
     .find({
@@ -54,9 +59,13 @@ drawQueue.process(async (job) => {
     { upsert: true }
   );
 
+  await logEvent("Prize status updated", { jobId: job.id });
+
   subscribers.forEach((s) => {
     bot.telegram.sendMessage(s.telegramId, winnersMessage);
   });
+
+  await logEvent("Messages sent to winners", { jobId: job.id });
 });
 
 export default drawQueue;

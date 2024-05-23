@@ -34,14 +34,14 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
     }
 
     ctx.reply(
-      "Если ты хочешь участвовать в то давай познакомимся. Напиши свою Фамилию"
+      "Если ты хочешь участвовать в розыгрыше призов, то давай познакомимся. 😃 Напиши свою Фамилию.🖊"
     );
     return ctx.wizard.next();
   },
   async (ctx) => {
     if (ctx.message && "text" in ctx.message) {
       ctx.wizard.state.lastName = ctx.message.text;
-      ctx.reply("А теперь Имя");
+      ctx.reply("А теперь Имя.🖊");
       return ctx.wizard.next();
     } else {
       ctx.reply("Пожалуйста, отправь текстовое сообщение.");
@@ -51,7 +51,7 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
     if (ctx.message && "text" in ctx.message) {
       ctx.wizard.state.firstName = ctx.message.text;
       ctx.reply(
-        "Отлично!\nДля участия в розыгрыше призов, необходимо поделиться с ботом номером телефона",
+        "Отлично!👍🏼\nЕще необходимо поделиться с ботом номером телефона. 📱",
         Markup.keyboard([
           Markup.button.contactRequest("📱 Отправить номер телефона"),
         ]).resize()
@@ -65,7 +65,7 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
     if (ctx.message && "contact" in ctx.message) {
       ctx.wizard.state.phoneNumber = ctx.message.contact.phone_number;
       await ctx.reply(
-        "Прочти условия участия и Политику конфиденциальности",
+        "Прочти условия участия и Политику конфиденциальности.📝",
         Markup.removeKeyboard()
       );
 
@@ -88,7 +88,7 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
       }
 
       await ctx.reply(
-        "Нажатие на Кнопку Регистрации будет означать, что ты прочел их и согласен",
+        "Нажатие на Кнопку Регистрации будет означать, что ты прочел их и согласен.✅",
         Markup.inlineKeyboard([
           Markup.button.callback("Регистрация", "confirm"),
           Markup.button.callback("Отменить", "cancel"),
@@ -97,7 +97,12 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
 
       return ctx.wizard.next();
     } else {
-      ctx.reply("Пожалуйста, отправь контакт.");
+      ctx.reply(
+        "Пожалуйста, отправь контакт.",
+        Markup.keyboard([
+          Markup.button.contactRequest("📱 Отправить номер телефона"),
+        ]).resize()
+      );
     }
   },
   async (ctx) => {}
@@ -148,19 +153,24 @@ eventRegistrationWizard.action("confirm", async (ctx) => {
       await ctx.answerCbQuery("Ошибка при регистраций.");
       return ctx.scene.leave();
     }
+    await ctx.reply(
+      `Теперь у тебя есть уникальный код, который участвует в розыгрыше призов, если ты станешь победителем ты получишь сообщение. Удачи! 🫶🏼`
+    );
 
-    await ctx.reply(`Расписание мероприятия:\n\n${event?.schedule}`);
+    await delay(5000);
+
+    await ctx.reply(`Расписание мероприятия.📜\n\n${event?.schedule}`);
 
     await delay(5000);
 
     if (event?.mapLink) {
-      await ctx.reply(`И не забудь карту!`);
+      await ctx.reply(`И не забудь карту!📍`);
       await ctx.replyWithDocument(`${hostname}${event.mapLink}`);
       await delay(5000);
     }
 
     await ctx.reply(
-      "Карту, расписание, условия участия и политику конфиденциальности ты всегда сможешь найти в меню."
+      "Карту, расписание, условия участия и политику конфиденциальности ты всегда сможешь найти в меню.⬇"
     );
     await delay(5000);
 
