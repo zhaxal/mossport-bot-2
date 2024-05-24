@@ -110,6 +110,8 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
 
 eventRegistrationWizard.action("confirm", async (ctx) => {
   try {
+    await ctx.answerCbQuery("Регистрация завершена.");
+
     const { firstName, lastName, phoneNumber, eventId } = ctx.wizard.state;
     const userId = ctx.from?.id;
 
@@ -179,8 +181,6 @@ eventRegistrationWizard.action("confirm", async (ctx) => {
       await delay(5000);
     }
     if (event.partnerMessage2) await ctx.reply(event.partnerMessage2);
-
-    await ctx.answerCbQuery("Регистрация завершена.");
 
     await ctx.editMessageReplyMarkup({
       inline_keyboard: [],
