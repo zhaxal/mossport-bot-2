@@ -10,7 +10,7 @@ import operatorRouter from "./src/routes/operator";
 import { bucket, drawInfoCol, eventInfoCol } from "./src/database";
 
 import "./src/bot";
-import "./src/drawQueue";
+import "./src/agenda";
 
 dotenv.config();
 

@@ -17,7 +17,8 @@ import {
   subscribersCol,
   userPrizeStatusCol,
 } from "../database";
-import drawQueue from "../drawQueue";
+
+import agenda from "../agenda";
 
 dotenv.config();
 
@@ -295,14 +296,24 @@ adminRouter.get("/event/:eventId/draw/start", async (req, res) => {
   }
 
   for (let i = 1; i <= numberOfDraws; i++) {
-    drawQueue.add(
+    // drawQueue.add(
+    //   {
+    //     eventId,
+    //     numberOfWinners,
+    //     winnersMessage: draw.winnersMessage,
+    //   },
+    //   {
+    //     delay: drawInterval * 60 * 60 * 1000 * i,
+    //   }
+    // );
+
+    agenda.schedule(
+      new Date(Date.now() + drawInterval * 60 * 60 * 1000 * i),
+      "draw",
       {
         eventId,
         numberOfWinners,
         winnersMessage: draw.winnersMessage,
-      },
-      {
-        delay: drawInterval * 60 * 60 * 1000 * i,
       }
     );
   }
