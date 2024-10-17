@@ -180,9 +180,13 @@ adminRouter.post("/event/:eventId/notification", async (req, res) => {
     .find({ _id: { $in: users.map((user) => user.subscriberId) } })
     .toArray();
 
-  subscribers.forEach((subscriber) => {
-    bot.telegram.sendMessage(subscriber.telegramId, message);
-  });
+  for (const subscriber of subscribers) {
+    try {
+      await bot.telegram.sendMessage(subscriber.telegramId, message);
+    } catch (error) {
+      console.error(`Error sending message to subscriber ${subscriber._id}`);
+    }
+  }
 
   res.send("Notification sent");
 });
@@ -207,22 +211,30 @@ adminRouter.patch("/event/:eventId/status", async (req, res) => {
     const subscribers = await subscribersCol.find().toArray();
 
     for (const subscriber of subscribers) {
-      await bot.telegram.sendMessage(
-        subscriber.telegramId,
-        `Привет, ${subscriber.name}!\nОткрыта регистрация на ${event.title}!\nВперед!`
-      );
+      try {
+        await bot.telegram.sendMessage(
+          subscriber.telegramId,
+          `Привет, ${subscriber.name}!\nОткрыта регистрация на ${event.title}!\nВперед!`
+        );
+      } catch (error) {
+        console.error(`Error sending message to subscriber ${subscriber._id}`);
+      }
 
-      await bot.telegram.sendMessage(
-        subscriber.telegramId,
-        `${event.description}`,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "Участвовать", callback_data: `event_${event._id}` }],
-            ],
-          },
-        }
-      );
+      try {
+        await bot.telegram.sendMessage(
+          subscriber.telegramId,
+          `${event.description}`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "Участвовать", callback_data: `event_${event._id}` }],
+              ],
+            },
+          }
+        );
+      } catch (error) {
+        console.error(`Error sending message to subscriber ${subscriber._id}`);
+      }
     }
   }
 
@@ -292,21 +304,14 @@ adminRouter.get("/event/:eventId/draw/start", async (req, res) => {
     .toArray();
 
   for (const subscriber of subscribers) {
-    await bot.telegram.sendMessage(subscriber.telegramId, introMessage);
+    try {
+      await bot.telegram.sendMessage(subscriber.telegramId, introMessage);
+    } catch (error) {
+      console.error(`Error sending message to subscriber ${subscriber._id}`);
+    }
   }
 
   for (let i = 1; i <= numberOfDraws; i++) {
-    // drawQueue.add(
-    //   {
-    //     eventId,
-    //     numberOfWinners,
-    //     winnersMessage: draw.winnersMessage,
-    //   },
-    //   {
-    //     delay: drawInterval * 60 * 60 * 1000 * i,
-    //   }
-    // );
-
     agenda.schedule(
       new Date(Date.now() + drawInterval * 60 * 60 * 1000 * i),
       "draw",
@@ -459,9 +464,18 @@ adminRouter.post("/announce", async (req, res) => {
   const subscribers = await subscribersCol.find().toArray();
 
   for (const subscriber of subscribers) {
-    await bot.telegram.sendMessage(subscriber.telegramId, message);
+    try {
+      await bot.telegram.sendMessage(subscriber.telegramId, message);
+    } catch (error) {
+      console.error(`Error sending message to subscriber ${subscriber._id}`);
+    }
+
     if (image) {
-      await bot.telegram.sendPhoto(subscriber.telegramId, image);
+      try {
+        await bot.telegram.sendPhoto(subscriber.telegramId, image);
+      } catch (error) {
+        console.error(`Error sending photo to subscriber ${subscriber._id}`);
+      }
     }
   }
   res.send("Announcement sent");

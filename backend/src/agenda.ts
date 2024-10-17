@@ -68,9 +68,17 @@ agenda.define("draw", async (job) => {
 
   await logEvent("Prize status updated", { jobId: job.attrs._id });
 
-  subscribers.forEach((s) => {
-    bot.telegram.sendMessage(s.telegramId, winnersMessage);
-  });
+  for (const s of subscribers) {
+    try {
+      await bot.telegram.sendMessage(s.telegramId, winnersMessage);
+    } catch (error) {
+      await logEvent("Error sending message", {
+        jobId: job.attrs._id,
+        subscriberId: s._id,
+        error: "Error sending message",
+      });
+    }
+  }
 
   await logEvent("Messages sent to winners", { jobId: job.attrs._id });
 });
