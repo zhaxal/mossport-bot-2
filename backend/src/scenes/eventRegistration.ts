@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import { ObjectId } from "mongodb";
-import { Markup, Scenes } from "telegraf";
+import { Context, Markup, Scenes } from "telegraf";
 import randomNumber from "random-number-csprng";
 
 import { MyContext } from "../types/bot";
@@ -110,97 +110,108 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
 
 eventRegistrationWizard.action("confirm", async (ctx) => {
   try {
+    // Respond to the callback query immediately
     await ctx.answerCbQuery("Регистрация завершена.");
 
-    const { firstName, lastName, phoneNumber, eventId } = ctx.wizard.state;
-    const userId = ctx.from?.id;
-
-    const subscriber = await subscribersCol.findOne({
-      telegramId: userId,
-    });
-
-    if (!subscriber) {
-      await ctx.reply(
-        "Произошла ошибка. Пожалуйста, начните с команды /start."
-      );
-      return ctx.scene.leave();
-    }
-
-    const shortId = await randomNumber(100000, 999999);
-
-    if (!firstName || !lastName || !phoneNumber || !eventId) {
-      await ctx.reply(
-        "Произошла ошибка. Пожалуйста, начните с команды /start."
-      );
-      return ctx.scene.leave();
-    }
-
-    await userCol.insertOne({
-      subscriberId: subscriber._id,
-      firstName,
-      lastName,
-      phoneNumber,
-      shortId,
-      eventId: new ObjectId(eventId),
-    });
-
-    const event = await eventInfoCol.findOne({
-      _id: new ObjectId(eventId),
-    });
-
-    if (!event) {
-      await ctx.reply(
-        "Произошла ошибка. Пожалуйста, начните с команды /start."
-      );
-      await ctx.answerCbQuery("Ошибка при регистраций.");
-      return ctx.scene.leave();
-    }
-    await ctx.reply(
-      `Теперь у тебя есть уникальный код, который участвует в розыгрыше призов, если ты станешь победителем ты получишь сообщение. Удачи! 🫶🏼`
+    // Offload the remaining logic to avoid blocking
+    processRegistration(ctx).catch((error) =>
+      console.error("Error during registration process:", error)
     );
-
-    await delay(5000);
-
-    await ctx.reply(`Расписание мероприятия.📜\n\n${event?.schedule}`);
-
-    await delay(5000);
-
-    if (event?.mapLink) {
-      await ctx.reply(`И не забудь карту!📍`);
-      await ctx.replyWithDocument(`${hostname}${event.mapLink}`);
-      await delay(5000);
-    }
-
-    await ctx.reply(
-      "Карту, расписание, условия участия и политику конфиденциальности ты всегда сможешь найти в меню.⬇"
-    );
-    await delay(5000);
-
-    if (event.partnerMessage) {
-      await ctx.reply(event.partnerMessage);
-      await delay(5000);
-    }
-    if (event.partnerMessage2) await ctx.reply(event.partnerMessage2);
-
-    await ctx.editMessageReplyMarkup({
-      inline_keyboard: [],
-    });
-
-    ctx.scene.enter("mainMenuWizard", {
-      eventId: event._id.toString(),
-    });
   } catch (error) {
     console.error(error);
-    ctx.answerCbQuery("Произошла ошибка. Пожалуйста, попробуйте позже.");
+    await ctx.answerCbQuery("Произошла ошибка. Пожалуйста, попробуйте позже.");
   }
 });
 
-eventRegistrationWizard.action("cancel", async (ctx) => {
-  ctx.answerCbQuery("Регистрация отменена.");
+async function processRegistration(ctx: any) {
+  const { firstName, lastName, phoneNumber, eventId } = ctx.wizard.state;
+  const userId = ctx.from?.id;
+
+  const subscriber = await subscribersCol.findOne({
+    telegramId: userId,
+  });
+
+  if (!subscriber) {
+    await ctx.reply("Произошла ошибка. Пожалуйста, начните с команды /start.");
+    return ctx.scene.leave();
+  }
+
+  const shortId = await randomNumber(100000, 999999);
+
+  if (!firstName || !lastName || !phoneNumber || !eventId) {
+    await ctx.reply("Произошла ошибка. Пожалуйста, начните с команды /start.");
+    return ctx.scene.leave();
+  }
+
+  await userCol.insertOne({
+    subscriberId: subscriber._id,
+    firstName,
+    lastName,
+    phoneNumber,
+    shortId,
+    eventId: new ObjectId(eventId),
+  });
+
+  const event = await eventInfoCol.findOne({
+    _id: new ObjectId(eventId),
+  });
+
+  if (!event) {
+    await ctx.reply("Произошла ошибка. Пожалуйста, начните с команды /start.");
+    return ctx.scene.leave();
+  }
+
+  await ctx.reply(
+    `Теперь у тебя есть уникальный код, который участвует в розыгрыше призов, если ты станешь победителем ты получишь сообщение. Удачи! 🫶🏼`
+  );
+
+  await delay(5000);
+
+  await ctx.reply(`Расписание мероприятия.📜\n\n${event?.schedule}`);
+
+  await delay(5000);
+
+  if (event?.mapLink) {
+    await ctx.reply(`И не забудь карту!📍`);
+    await ctx.replyWithDocument(`${hostname}${event.mapLink}`);
+    await delay(5000);
+  }
+
+  await ctx.reply(
+    "Карту, расписание, условия участия и политику конфиденциальности ты всегда сможешь найти в меню.⬇"
+  );
+  await delay(5000);
+
+  if (event.partnerMessage) {
+    await ctx.reply(event.partnerMessage);
+    await delay(5000);
+  }
+  if (event.partnerMessage2) {
+    await ctx.reply(event.partnerMessage2);
+  }
 
   await ctx.editMessageReplyMarkup({
     inline_keyboard: [],
   });
 
-  return ctx.scene.leave();
+  ctx.scene.enter("mainMenuWizard", {
+    eventId: event._id.toString(),
+  });
+}
+
+eventRegistrationWizard.action("cancel", async (ctx) => {
+  try {
+    // Answer the callback query immediately
+    await ctx.answerCbQuery("Регистрация отменена.");
+
+    // Perform additional actions
+    await ctx.editMessageReplyMarkup({
+      inline_keyboard: [],
+    });
+
+    ctx.scene.leave();
+  } catch (error) {
+    console.error("Error in cancel action:", error);
+    await ctx.answerCbQuery("Произошла ошибка. Пожалуйста, попробуйте позже.");
+  }
 });

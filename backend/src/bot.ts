@@ -68,21 +68,35 @@ bot.on("message", async (ctx) => {
 });
 
 bot.action(/event_(.+)/, async (ctx) => {
-  const eventId = ctx.match[1];
-
-  const event = await eventInfoCol.findOne({
-    _id: new ObjectId(eventId),
-  });
-
-  if (event) {
+  try {
+    // Respond to the callback query immediately
     await ctx.answerCbQuery("Выбран ивент.");
-    await ctx.scene.enter("eventRegistrationWizard", {
-      eventId: event._id.toString(),
+
+    const eventId = ctx.match[1];
+
+    // Fetch event from the database
+    const event = await eventInfoCol.findOne({
+      _id: new ObjectId(eventId),
     });
-    await ctx.deleteMessage();
-  } else {
-    await ctx.answerCbQuery("Не удалось выбрать ивент.");
-    await ctx.reply("Ивент не найден. Попробуйте другой ивент.");
+
+    if (event) {
+      // Enter the registration wizard scene
+      await ctx.scene.enter("eventRegistrationWizard", {
+        eventId: event._id.toString(),
+      });
+
+      // Attempt to delete the original message
+      try {
+        await ctx.deleteMessage();
+      } catch (deleteError) {
+        console.error("Error deleting message:", deleteError);
+      }
+    } else {
+      await ctx.reply("Ивент не найден. Попробуйте другой ивент.");
+    }
+  } catch (error) {
+    console.error("Error handling event selection:", error);
+    await ctx.answerCbQuery("Произошла ошибка. Пожалуйста, попробуйте позже.");
   }
 });
 
