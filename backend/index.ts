@@ -1,5 +1,5 @@
 import cors from "cors";
-import dotenv from "dotenv";
+
 import express from "express";
 
 import { ObjectId } from "mongodb";
@@ -12,9 +12,7 @@ import { bucket, drawInfoCol, eventInfoCol } from "./src/database";
 import "./src/bot";
 import "./src/agenda";
 
-dotenv.config();
-
-const port = process.env.PORT || 3003;
+import { port } from "./src/config";
 
 const app = express();
 const apiRouter = express.Router();

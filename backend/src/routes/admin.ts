@@ -1,13 +1,11 @@
 import * as fs from "fs";
-import dotenv from "dotenv";
 import json2csv from "json2csv";
-
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { ObjectId } from "mongodb";
 import { v4 as uuidv4 } from "uuid";
 import { IncomingForm } from "formidable";
 
-import bot from "../bot";
+
 import {
   eventInfoCol,
   userCol,
@@ -19,466 +17,406 @@ import {
 } from "../database";
 
 import agenda from "../agenda";
-
-dotenv.config();
-
-const adminToken = process.env.ADMIN_TOKEN;
+import { adminToken } from "../config";
 
 const adminRouter = Router();
 
-adminRouter.post("/token", async (req, res) => {
-  if (req.body.token !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
 
-  res.send("Token verified");
-});
-
-adminRouter.post("/event", async (req, res) => {
+const verifyAdminToken = (req: Request, res: Response, next: NextFunction) => {
   if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
+    return res.status(401).json({ error: "Unauthorized" });
   }
+  next();
+};
 
-  const event = req.body;
-
-  await eventInfoCol.insertOne({
-    ...event,
-    status: "created",
-  });
-
-  res.send("Event added");
-});
-
-adminRouter.patch("/event/:eventId", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const eventId = req.params.eventId;
-  const event = req.body;
-
-  await eventInfoCol.updateOne({ _id: new ObjectId(eventId) }, { $set: event });
-
-  res.send("Event updated");
-});
-
-adminRouter.post("/event/:eventId/file/:type", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const form = new IncomingForm();
-  const eventId = req.params.eventId;
-
-  const [_, files] = await form.parse(req);
-
-  if (!files.file) {
-    return res.status(400).send("No file uploaded");
-  }
-
-  const file = files.file[0];
-
-  const randomFileName = Math.random().toString(36).substring(7);
-
-  const uploadedFile = fs.createReadStream(file.filepath).pipe(
-    bucket.openUploadStream(
-      file.originalFilename || `${file}${randomFileName}`,
-      {
-        chunkSizeBytes: file.size,
+adminRouter.post(
+  "/token",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (req.body.token !== adminToken) {
+        return res.status(401).json({ error: "Unauthorized" });
       }
-    )
-  );
+      res.json({ message: "Token verified" });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
-  switch (req.params.type) {
-    case "map":
+adminRouter.post(
+  "/event",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const event = req.body;
+      await eventInfoCol.insertOne({
+        ...event,
+        status: "created",
+      });
+      res.json({ message: "Event added" });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+adminRouter.patch(
+  "/event/:eventId",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const eventId = req.params.eventId;
+      const event = req.body;
       await eventInfoCol.updateOne(
         { _id: new ObjectId(eventId) },
-        { $set: { mapLink: `/files/${uploadedFile.filename.toString()}` } }
+        { $set: event }
       );
-      break;
+      res.json({ message: "Event updated" });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
-    case "rules":
-      await eventInfoCol.updateOne(
-        { _id: new ObjectId(eventId) },
-        { $set: { rulesLink: `/files/${uploadedFile.filename.toString()}` } }
-      );
-      break;
-
-    case "policy":
-      await eventInfoCol.updateOne(
-        { _id: new ObjectId(eventId) },
-        { $set: { policyLink: `/files/${uploadedFile.filename.toString()}` } }
-      );
-      break;
-
-    case "prizeTable":
-      await eventInfoCol.updateOne(
-        { _id: new ObjectId(eventId) },
+adminRouter.post(
+  "/event/:eventId/file/:type",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const form = new IncomingForm();
+      const eventId = req.params.eventId;
+      const [fields, files] = await form.parse(req);
+      if (!files.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const file = files.file[0];
+      const randomFileName = Math.random().toString(36).substring(7);
+      const uploadStream = bucket.openUploadStream(
+        file.originalFilename || `${file}${randomFileName}`,
         {
-          $set: {
-            prizeTableLink: `/files/${uploadedFile.filename.toString()}`,
-          },
+          chunkSizeBytes: file.size,
         }
       );
-      break;
+      fs.createReadStream(file.filepath).pipe(uploadStream);
 
-    default:
-      res.status(400).send("Invalid file type");
-      break;
-  }
-
-  res.send("File uploaded");
-});
-
-adminRouter.patch("/operator", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const token = uuidv4();
-
-  await tokenCol.updateOne(
-    {
-      role: "operator",
-    },
-    { $set: { token: token, updatedAt: new Date() } },
-    {
-      upsert: true,
+      // Wait for upload to finish
+      uploadStream.on("finish", async () => {
+        const fileLink = `/files/${uploadStream.filename.toString()}`;
+        switch (req.params.type) {
+          case "map":
+            await eventInfoCol.updateOne(
+              { _id: new ObjectId(eventId) },
+              { $set: { mapLink: fileLink } }
+            );
+            break;
+          case "rules":
+            await eventInfoCol.updateOne(
+              { _id: new ObjectId(eventId) },
+              { $set: { rulesLink: fileLink } }
+            );
+            break;
+          case "policy":
+            await eventInfoCol.updateOne(
+              { _id: new ObjectId(eventId) },
+              { $set: { policyLink: fileLink } }
+            );
+            break;
+          case "prizeTable":
+            await eventInfoCol.updateOne(
+              { _id: new ObjectId(eventId) },
+              { $set: { prizeTableLink: fileLink } }
+            );
+            break;
+          default:
+            return res.status(400).json({ error: "Invalid file type" });
+        }
+        res.json({ message: "File uploaded" });
+      });
+      uploadStream.on("error", (err) => {
+        next(err);
+      });
+    } catch (err) {
+      next(err);
     }
-  );
-
-  res.send("Operator token updated");
-});
-
-adminRouter.get("/operator", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
   }
+);
 
-  const tokenDoc = await tokenCol.findOne({ role: "operator" });
-
-  if (!tokenDoc) {
-    return res.status(404).send("Token not found");
-  }
-
-  res.send(tokenDoc);
-});
-
-adminRouter.post("/event/:eventId/notification", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const { message } = req.body;
-  const eventId = req.params.eventId;
-
-  const users = await userCol
-    .find({ eventId: new ObjectId(eventId) })
-    .toArray();
-
-  const subscribers = await subscribersCol
-    .find({ _id: { $in: users.map((user) => user.subscriberId) } })
-    .toArray();
-
-  for (const subscriber of subscribers) {
+adminRouter.patch(
+  "/operator",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await bot.telegram.sendMessage(subscriber.telegramId, message);
-    } catch (error) {
-      console.error(`Error sending message to subscriber ${subscriber._id}`);
+      const token = uuidv4();
+      await tokenCol.updateOne(
+        { role: "operator" },
+        { $set: { token: token, updatedAt: new Date() } },
+        { upsert: true }
+      );
+      res.json({ message: "Operator token updated" });
+    } catch (err) {
+      next(err);
     }
   }
+);
 
-  res.send("Notification sent");
-});
-
-adminRouter.patch("/event/:eventId/status", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const eventId = req.params.eventId;
-  const { status } = req.body;
-
-  await eventInfoCol.updateOne(
-    { _id: new ObjectId(eventId) },
-    { $set: { status } }
-  );
-
-  if (status === "active") {
-    const event = await eventInfoCol.findOne({ _id: new ObjectId(eventId) });
-    if (!event) return;
-
-    const subscribers = await subscribersCol.find().toArray();
-
-    for (const subscriber of subscribers) {
-      try {
-        await bot.telegram.sendMessage(
-          subscriber.telegramId,
-          `Привет, ${subscriber.name}!\nОткрыта регистрация на ${event.title}!\nВперед!`
-        );
-      } catch (error) {
-        console.error(`Error sending message to subscriber ${subscriber._id}`);
+adminRouter.get(
+  "/operator",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const tokenDoc = await tokenCol.findOne({ role: "operator" });
+      if (!tokenDoc) {
+        return res.status(404).json({ error: "Token not found" });
       }
+      res.json(tokenDoc);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
-      try {
-        await bot.telegram.sendMessage(
-          subscriber.telegramId,
-          `${event.description}`,
+
+adminRouter.post(
+  "/event/:eventId/notification",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { message } = req.body;
+      const eventId = req.params.eventId;
+      await agenda.now("send event notification", { eventId, message });
+      res.json({ message: "Notification scheduled" });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+adminRouter.patch(
+  "/event/:eventId/status",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const eventId = req.params.eventId;
+      const { status } = req.body;
+      await eventInfoCol.updateOne(
+        { _id: new ObjectId(eventId) },
+        { $set: { status } }
+      );
+
+      if (status === "active") {
+        agenda.now("send notifications", { eventId });
+      }
+      res.json({ message: "Event status updated" });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+adminRouter.get(
+  "/event/:eventId/users/csv",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const eventId = req.params.eventId;
+      const users = await userCol
+        .find({ eventId: new ObjectId(eventId) })
+        .toArray();
+      const csvData = json2csv.parse(users);
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=users.csv");
+      res.send(csvData);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+adminRouter.patch(
+  "/event/:eventId/draw",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const eventId = req.params.eventId;
+      const drawInfo = req.body;
+      await drawInfoCol.updateOne(
+        { eventId: new ObjectId(eventId) },
+        { $set: drawInfo },
+        { upsert: true }
+      );
+      res.json({ message: "Draw info updated" });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+adminRouter.get(
+  "/event/:eventId/draw/start",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const eventId = req.params.eventId;
+      const draw = await drawInfoCol.findOne({
+        eventId: new ObjectId(eventId),
+      });
+      if (!draw) {
+        return res.status(404).json({ error: "Draw info not found" });
+      }
+      const {
+        drawInterval,
+        drawDuration: numberOfDraws,
+        winnerNumber: numberOfWinners,
+        introMessage,
+      } = draw;
+
+
+      await agenda.now("send draw intro", { eventId, introMessage });
+
+      for (let i = 1; i <= numberOfDraws; i++) {
+        const scheduledTime = new Date(
+          Date.now() + drawInterval * 60 * 60 * 1000 * i
+        );
+        agenda.schedule(scheduledTime, "draw", {
+          eventId,
+          numberOfWinners,
+          winnersMessage: draw.winnersMessage,
+        });
+      }
+      await drawInfoCol.updateOne(
+        { eventId: new ObjectId(eventId) },
+        { $set: { completed: true } }
+      );
+      res.json({ message: "Draw started" });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+adminRouter.get(
+  "/event/:eventId/draw/winners",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const eventId = req.params.eventId;
+      const winnersIds = await userPrizeStatusCol
+        .find({ eventId: new ObjectId(eventId) })
+        .toArray();
+      interface WinnersInfo {
+        firstName: string;
+        lastName: string;
+        shortId: number;
+        prizeClaimed: boolean;
+      }
+      const winnersInfo: WinnersInfo[] = [];
+      for (const winner of winnersIds) {
+        const user = await userCol.findOne({
+          shortId: winner.shortId,
+          eventId: new ObjectId(eventId),
+        });
+        if (user) {
+          winnersInfo.push({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            shortId: user.shortId,
+            prizeClaimed: winner.claimed,
+          });
+        }
+      }
+      res.json(winnersInfo);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+adminRouter.get(
+  "/event/:eventId/csv",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const eventId = req.params.eventId;
+      const users = await userCol
+        .find({ eventId: new ObjectId(eventId) })
+        .toArray();
+      interface UserCSV {
+        num: number;
+        firstName: string;
+        lastName: string;
+        phoneNumber: string;
+        winner: boolean;
+        prizeClaimed: boolean;
+      }
+      const usersCSV: UserCSV[] = [];
+      for (const user of users) {
+        const prizeStatus = await userPrizeStatusCol.findOne({
+          shortId: user.shortId,
+          eventId: user.eventId,
+        });
+        usersCSV.push({
+          num: usersCSV.length + 1,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          winner: !!prizeStatus,
+          prizeClaimed: prizeStatus?.claimed || false,
+        });
+      }
+      const csvData = json2csv.parse(usersCSV);
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=users.csv");
+      res.send(csvData);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+adminRouter.get(
+  "/csv",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const users = await userCol
+        .aggregate([
           {
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "Участвовать", callback_data: `event_${event._id}` }],
-              ],
+            $group: {
+              _id: "$subscriberId",
+              doc: { $first: "$$ROOT" },
             },
-          }
-        );
-      } catch (error) {
-        console.error(`Error sending message to subscriber ${subscriber._id}`);
-      }
-    }
-  }
-
-  res.send("Event status updated");
-});
-
-adminRouter.get("/event/:eventId/users/csv", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const eventId = req.params.eventId;
-
-  const users = await userCol
-    .find({ eventId: new ObjectId(eventId) })
-    .toArray();
-
-  const csvData = json2csv.parse(users);
-
-  res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", "attachment; filename=users.csv");
-
-  res.send(csvData);
-});
-
-adminRouter.patch("/event/:eventId/draw", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const eventId = req.params.eventId;
-  const drawInfo = req.body;
-
-  await drawInfoCol.updateOne(
-    { eventId: new ObjectId(eventId) },
-    { $set: drawInfo },
-    { upsert: true }
-  );
-
-  res.send("Draw info updated");
-});
-
-adminRouter.get("/event/:eventId/draw/start", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const eventId = req.params.eventId;
-
-  const draw = await drawInfoCol.findOne({ eventId: new ObjectId(eventId) });
-
-  if (!draw) {
-    return res.status(404).send("Draw info not found");
-  }
-
-  const drawInterval = draw.drawInterval;
-  const numberOfDraws = draw.drawDuration;
-  const numberOfWinners = draw.winnerNumber;
-  const introMessage = draw.introMessage;
-
-  const users = await userCol
-    .find({ eventId: new ObjectId(eventId) })
-    .toArray();
-
-  const subscribers = await subscribersCol
-    .find({ _id: { $in: users.map((user) => user.subscriberId) } })
-    .toArray();
-
-  for (const subscriber of subscribers) {
-    try {
-      await bot.telegram.sendMessage(subscriber.telegramId, introMessage);
-    } catch (error) {
-      console.error(`Error sending message to subscriber ${subscriber._id}`);
-    }
-  }
-
-  for (let i = 1; i <= numberOfDraws; i++) {
-    agenda.schedule(
-      new Date(Date.now() + drawInterval * 60 * 60 * 1000 * i),
-      "draw",
-      {
-        eventId,
-        numberOfWinners,
-        winnersMessage: draw.winnersMessage,
-      }
-    );
-  }
-
-  await drawInfoCol.updateOne(
-    { eventId: new ObjectId(eventId) },
-    { $set: { completed: true } }
-  );
-
-  res.send("Draw started");
-});
-
-adminRouter.get("/event/:eventId/draw/winners", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const eventId = req.params.eventId;
-
-  const winnersIds = await userPrizeStatusCol
-    .find({ eventId: new ObjectId(eventId) })
-    .toArray();
-
-  interface WinnersInfo {
-    firstName: string;
-    lastName: string;
-    shortId: number;
-    prizeClaimed: boolean;
-  }
-
-  const winnersInfo: WinnersInfo[] = [];
-
-  for (const winner of winnersIds) {
-    const user = await userCol.findOne({
-      shortId: winner.shortId,
-      eventId: new ObjectId(eventId),
-    });
-
-    if (user) {
-      winnersInfo.push({
+          },
+          { $replaceRoot: { newRoot: "$doc" } },
+        ])
+        .toArray();
+      const usersCSV = users.map((user, i) => ({
+        num: i + 1,
         firstName: user.firstName,
         lastName: user.lastName,
-        shortId: user.shortId,
-        prizeClaimed: winner.claimed,
-      });
+        phoneNumber: user.phoneNumber,
+      }));
+      const csvData = json2csv.parse(usersCSV);
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=users.csv");
+      res.send(csvData);
+    } catch (err) {
+      next(err);
     }
   }
+);
 
-  res.send(winnersInfo);
-});
-
-adminRouter.get("/event/:eventId/csv", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const eventId = req.params.eventId;
-
-  const users = await userCol
-    .find({ eventId: new ObjectId(eventId) })
-    .toArray();
-
-  interface UserCSV {
-    num: number;
-    firstName: string;
-    lastName: string;
-    phoneNumber: string;
-    winner: boolean;
-    prizeClaimed: boolean;
-  }
-
-  const usersCSV: UserCSV[] = [];
-
-  for (const user of users) {
-    const prizeStatus = await userPrizeStatusCol.findOne({
-      shortId: user.shortId,
-      eventId: user.eventId,
-    });
-
-    usersCSV.push({
-      num: usersCSV.length + 1,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
-      winner: !!prizeStatus,
-      prizeClaimed: prizeStatus?.claimed || false,
-    });
-  }
-
-  const csvData = json2csv.parse(usersCSV);
-
-  res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", "attachment; filename=users.csv");
-
-  res.send(csvData);
-});
-
-adminRouter.get("/csv", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const users = await userCol
-    .aggregate([
-      {
-        $group: {
-          _id: "$subscriberId",
-          doc: {
-            $first: "$$ROOT",
-          },
-        },
-      },
-      {
-        $replaceRoot: {
-          newRoot: "$doc",
-        },
-      },
-    ])
-    .toArray();
-
-  const usersCSV = users.map((user, i) => ({
-    num: i + 1,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    phoneNumber: user.phoneNumber,
-  }));
-
-  const csvData = json2csv.parse(usersCSV);
-
-  res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", "attachment; filename=users.csv");
-
-  res.send(csvData);
-});
-
-adminRouter.post("/announce", async (req, res) => {
-  if (req.headers.authorization !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  const { message, image } = req.body;
-
-  const subscribers = await subscribersCol.find().toArray();
-
-  for (const subscriber of subscribers) {
+adminRouter.post(
+  "/announce",
+  verifyAdminToken,
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await bot.telegram.sendMessage(subscriber.telegramId, message);
-    } catch (error) {
-      console.error(`Error sending message to subscriber ${subscriber._id}`);
-    }
-
-    if (image) {
-      try {
-        await bot.telegram.sendPhoto(subscriber.telegramId, image);
-      } catch (error) {
-        console.error(`Error sending photo to subscriber ${subscriber._id}`);
-      }
+      const { message, image } = req.body;
+      await agenda.now("send announcement", { message, image });
+      res.json({ message: "Announcement scheduled" });
+    } catch (err) {
+      next(err);
     }
   }
-  res.send("Announcement sent");
-});
+);
 
 export default adminRouter;

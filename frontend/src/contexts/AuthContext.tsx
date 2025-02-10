@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import backendInstance from "../utils/backendInstance";
 
 interface AuthContextValue {
@@ -26,6 +26,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [role, setRole] = useState<"operator" | "admin" | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const login = useCallback((role: "admin" | "operator", token: string) => {
+    localStorage.setItem(`${role}Token`, token);
+    setIsLoggedIn(true);
+    setRole(role);
+  }, []);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("operatorToken");
+    setIsLoggedIn(false);
+    setRole(null);
+  }, []);
+
   const verifyAdminToken = async (token: string) => {
     try {
       await backendInstance.post("/admin/token", { token });
@@ -45,36 +58,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    const operatorToken = localStorage.getItem("operatorToken");
+    (async function checkToken() {
+      const adminToken = localStorage.getItem("adminToken");
+      const operatorToken = localStorage.getItem("operatorToken");
 
-    if (token) {
-      verifyAdminToken(token).then(() => setLoading(false));
-    }
-
-    if (operatorToken) {
-      verifyOperatorToken(operatorToken).then(() => setLoading(false));
-    }
-
-    setLoading(false);
-  }, []);
-
-  const logout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("operatorToken");
-    setIsLoggedIn(false);
-    setRole(null);
-  };
-
-  const login = (role: "admin" | "operator", token: string) => {
-    localStorage.setItem(`${role}Token`, token);
-    setIsLoggedIn(true);
-    setRole(role);
-    setLoading(false);
-  };
+      if (adminToken) {
+        await verifyAdminToken(adminToken);
+      } else if (operatorToken) {
+        await verifyOperatorToken(operatorToken);
+      }
+      setLoading(false);
+    })();
+  }, [login, logout]);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, role, logout, login, loading }}>
+    <AuthContext.Provider value={{ isLoggedIn, role, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -82,7 +80,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;

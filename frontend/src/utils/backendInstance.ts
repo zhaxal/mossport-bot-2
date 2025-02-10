@@ -1,7 +1,8 @@
 import axios from "axios";
+import { baseURL } from "./config";
 
 const backendInstance = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL || "https://mossport.info/api",
+  baseURL,
   timeout: 5000,
 });
 

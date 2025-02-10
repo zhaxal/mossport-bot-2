@@ -1,18 +1,18 @@
 import { Agenda } from "@hokify/agenda";
-import dotenv from "dotenv";
 import { ObjectId } from "mongodb";
 
-import { userCol, subscribersCol, userPrizeStatusCol } from "./database";
+import {
+  userCol,
+  subscribersCol,
+  userPrizeStatusCol,
+  eventInfoCol,
+} from "./database";
 import bot from "./bot";
-
-import logEvent from "./utils/logger";
-
-dotenv.config();
+import { mongoUrl } from "./config";
 
 const agenda = new Agenda({
   db: {
-    address:
-      process.env.MONGO_URL || "mongodb://0.0.0.0:27017/mossport-database-2",
+    address: mongoUrl,
   },
 });
 
@@ -34,57 +34,189 @@ async function selectWinners(eventId: string, numberOfWinners: number) {
     [participants[i], participants[j]] = [participants[j], participants[i]];
   }
 
-  const winners = participants.slice(0, numberOfWinners);
-
-  return winners;
+  return participants.slice(0, numberOfWinners);
 }
 
 agenda.define("draw", async (job) => {
-  const { eventId, numberOfWinners, winnersMessage } = job.attrs.data;
+  try {
+    const { eventId, numberOfWinners, winnersMessage } = job.attrs.data as {
+      eventId: string;
+      numberOfWinners: number;
+      winnersMessage: string;
+    };
 
-  await logEvent("Job processing started", {
-    jobId: job.attrs._id,
-    eventId,
-    numberOfWinners,
-  });
+    const winners = await selectWinners(eventId, numberOfWinners);
 
-  const winners = await selectWinners(eventId, numberOfWinners);
+    const subscribers = await subscribersCol
+      .find({
+        _id: { $in: winners.map((winner) => winner.subscriberId) },
+      })
+      .toArray();
 
-  await logEvent("Winners selected", { jobId: job.attrs._id, winners });
+    await userPrizeStatusCol.insertMany(
+      winners.map((winner) => ({
+        shortId: winner.shortId,
+        claimed: false,
+        eventId: new ObjectId(eventId),
+      }))
+    );
 
-  const subscribers = await subscribersCol
-    .find({
-      _id: { $in: winners.map((winner) => winner.subscriberId) },
-    })
-    .toArray();
-
-  await userPrizeStatusCol.insertMany(
-    winners.map((winner) => ({
-      shortId: winner.shortId,
-      claimed: false,
-      eventId: new ObjectId(eventId),
-    }))
-  );
-
-  await logEvent("Prize status updated", { jobId: job.attrs._id });
-
-  for (const s of subscribers) {
-    try {
-      await bot.telegram.sendMessage(s.telegramId, winnersMessage);
-    } catch (error) {
-      await logEvent("Error sending message", {
-        jobId: job.attrs._id,
-        subscriberId: s._id,
-        error: "Error sending message",
-      });
-    }
+    await Promise.allSettled(
+      subscribers.map(async (subscriber) => {
+        try {
+          await bot.telegram.sendMessage(subscriber.telegramId, winnersMessage);
+        } catch (error) {
+          console.error(
+            `Error sending message to subscriber ${subscriber._id}:`,
+            error
+          );
+        }
+      })
+    );
+  } catch (error) {
+    console.error("Error in draw job:", error);
+    throw error;
   }
+});
 
-  await logEvent("Messages sent to winners", { jobId: job.attrs._id });
+agenda.define("send notifications", async (job) => {
+  try {
+    const { eventId } = job.attrs.data as { eventId: string };
+    const event = await eventInfoCol.findOne({ _id: new ObjectId(eventId) });
+    if (!event) throw new Error("Event not found");
+
+    const subscribers = await subscribersCol.find().toArray();
+
+    const sendMessages = (subscriber: any) =>
+      Promise.allSettled([
+        bot.telegram.sendMessage(
+          subscriber.telegramId,
+          `Привет, ${subscriber.name}!\nОткрыта регистрация на ${event.title}!\nВперед!`
+        ),
+        bot.telegram.sendMessage(
+          subscriber.telegramId,
+          `${event.description}`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: "Участвовать",
+                    callback_data: `event_${event._id}`,
+                  },
+                ],
+              ],
+            },
+          }
+        ),
+      ]);
+
+    await Promise.allSettled(subscribers.map(sendMessages));
+  } catch (error) {
+    console.error("Error in send notifications job:", error);
+    throw error;
+  }
+});
+
+agenda.define("send event notification", async (job) => {
+  try {
+    const { eventId, message } = job.attrs.data as {
+      eventId: string;
+      message: string;
+    };
+
+    const users = await userCol
+      .find({ eventId: new ObjectId(eventId) })
+      .toArray();
+    const subscribers = await subscribersCol
+      .find({
+        _id: { $in: users.map((user) => user.subscriberId) },
+      })
+      .toArray();
+
+    await Promise.allSettled(
+      subscribers.map(async (subscriber) => {
+        try {
+          await bot.telegram.sendMessage(subscriber.telegramId, message);
+        } catch (error) {
+          console.error(
+            `Error sending message to subscriber ${subscriber._id}:`,
+            error
+          );
+        }
+      })
+    );
+  } catch (error) {
+    console.error("Error in send event notification job:", error);
+    throw error;
+  }
+});
+
+agenda.define("send draw intro", async (job) => {
+  try {
+    const { eventId, introMessage } = job.attrs.data as {
+      eventId: string;
+      introMessage: string;
+    };
+    const users = await userCol
+      .find({ eventId: new ObjectId(eventId) })
+      .toArray();
+    const subscribers = await subscribersCol
+      .find({ _id: { $in: users.map((user) => user.subscriberId) } })
+      .toArray();
+
+    await Promise.allSettled(
+      subscribers.map(async (subscriber) => {
+        return bot.telegram.sendMessage(subscriber.telegramId, introMessage);
+      })
+    );
+  } catch (error) {
+    console.error("Error in send draw intro job:", error);
+    throw error;
+  }
+});
+
+agenda.define("send announcement", async (job) => {
+  try {
+    const { message, image } = job.attrs.data as {
+      message: string;
+      image?: string;
+    };
+    const subscribers = await subscribersCol.find().toArray();
+
+    await Promise.allSettled(
+      subscribers.map(async (subscriber) => {
+        try {
+          await bot.telegram.sendMessage(subscriber.telegramId, message);
+        } catch (error) {
+          console.error(
+            `Error sending message to subscriber ${subscriber._id}:`,
+            error
+          );
+        }
+        if (image) {
+          try {
+            await bot.telegram.sendPhoto(subscriber.telegramId, image);
+          } catch (error) {
+            console.error(
+              `Error sending photo to subscriber ${subscriber._id}:`,
+              error
+            );
+          }
+        }
+      })
+    );
+  } catch (error) {
+    console.error("Error in send announcement job:", error);
+    throw error;
+  }
 });
 
 agenda.on("ready", () => {
-  agenda.start();
+  agenda
+    .start()
+    .then(() => console.log("Agenda started"))
+    .catch((err) => console.error("Agenda failed to start:", err));
 });
 
 export default agenda;

@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@hokify/agenda": "^6.3.0",
+    "@telegraf/session": "^2.0.0-beta.7",
     "axios": "^1.6.8",
     "bull": "^4.12.2",
     "cors": "^2.8.5",

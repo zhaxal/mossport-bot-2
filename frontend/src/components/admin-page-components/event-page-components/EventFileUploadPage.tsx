@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import backendInstance from "../../../utils/backendInstance";
+import { baseURL } from "../../../utils/config";
+
 import { AxiosError } from "axios";
 
 interface FileUploadButtonProps {
@@ -10,9 +12,6 @@ interface FileUploadButtonProps {
   uploaded: boolean;
   link?: string;
 }
-
-const hostname =
-  import.meta.env.VITE_BACKEND_URL || "http://localhost:3003/api";
 
 function FileUploadButton(props: FileUploadButtonProps) {
   const { type, uploaded, link } = props;
@@ -66,7 +65,7 @@ function FileUploadButton(props: FileUploadButtonProps) {
       {link && (
         <button
           onClick={() => {
-            window.open(`${hostname}${link}`, "_blank");
+            window.open(`${baseURL}${link}`, "_blank");
           }}
           className="bg-green-500 hover:bg-green-700 text-white font-bold my-1 py-2 px-4 rounded focus:outline-none focus:shadow-outline cursor-pointer w-full sm:w-auto"
         >

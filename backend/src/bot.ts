@@ -1,17 +1,14 @@
-import dotenv from "dotenv";
-
 import { ObjectId } from "mongodb";
 import { Scenes, Telegraf, session, Markup } from "telegraf";
 
 import { MyContext } from "./types/bot";
-import { eventInfoCol, subscribersCol } from "./database";
+import { eventInfoCol, subscribersCol, client } from "./database";
 
 import { mainMenuWizard } from "./scenes/mainMenu";
 import { eventRegistrationWizard } from "./scenes/eventRegistration";
 
-dotenv.config();
-
-const botToken = process.env.BOT_TOKEN || "";
+import { botToken } from "./config";
+import { Mongo } from "@telegraf/session/mongodb";
 
 const bot = new Telegraf<MyContext>(botToken);
 
@@ -20,7 +17,11 @@ const stage = new Scenes.Stage<MyContext>([
   mainMenuWizard,
 ]);
 
-bot.use(session());
+const store = Mongo<{}>({
+  client,
+});
+
+bot.use(session({ store }));
 bot.use(stage.middleware());
 
 bot.command("start", async (ctx) => {
@@ -69,23 +70,18 @@ bot.on("message", async (ctx) => {
 
 bot.action(/event_(.+)/, async (ctx) => {
   try {
-    // Respond to the callback query immediately
     await ctx.answerCbQuery("Выбран ивент.");
 
     const eventId = ctx.match[1];
 
-    // Fetch event from the database
     const event = await eventInfoCol.findOne({
       _id: new ObjectId(eventId),
     });
 
     if (event) {
-      // Enter the registration wizard scene
       await ctx.scene.enter("eventRegistrationWizard", {
         eventId: event._id.toString(),
       });
-
-      // Attempt to delete the original message
       try {
         await ctx.deleteMessage();
       } catch (deleteError) {

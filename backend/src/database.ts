@@ -1,9 +1,9 @@
 import { GridFSBucket, MongoClient, ObjectId } from "mongodb";
+import { mongoUrl, dbName } from "./config";
 
-const uri = process.env.MONGO_URL || "mongodb://0.0.0.0:27017";
-const client = new MongoClient(uri);
+export const client = new MongoClient(mongoUrl);
 client.connect();
-const db = client.db(process.env.DB_NAME || "mossport-database-2");
+const db = client.db(dbName);
 
 export const bucket = new GridFSBucket(db, { bucketName: "eventFiles" });
 

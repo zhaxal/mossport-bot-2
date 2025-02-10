@@ -1,13 +1,12 @@
-import dotenv from "dotenv";
 import { ObjectId } from "mongodb";
 import { Markup, Scenes } from "telegraf";
 
 import { MyContext } from "../types/bot";
 import { eventInfoCol, subscribersCol, userCol } from "../database";
 
-dotenv.config();
+import { hostname } from "../config";
 
-const hostname = process.env.HOSTNAME || `https://mossport.info`;
+import { isValidURL } from "../utils/url";
 
 export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
   "mainMenuWizard",
@@ -66,12 +65,10 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
 
       switch (ctx.message.text) {
         case "🔢 Мой код":
-          ctx.reply(
-            `Твой секретный код: ${user.shortId}`
-          );
+          ctx.reply(`Твой секретный код: ${user.shortId}`);
           break;
         case "🗺️ Карта":
-          if (event?.mapLink) {
+          if (event?.mapLink && isValidURL(event.mapLink)) {
             ctx.replyWithDocument(`${hostname}${event.mapLink}`);
           } else {
             ctx.reply("Карты пока нет.");
@@ -85,14 +82,14 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
           }
           break;
         case "📜 Условия":
-          if (event?.rulesLink) {
+          if (event?.rulesLink && isValidURL(event.rulesLink)) {
             ctx.replyWithDocument(`${hostname}${event.rulesLink}`);
           } else {
             ctx.reply("Условий пока нет.");
           }
           break;
         case "🔒 Политика конфиденциальности":
-          if (event?.policyLink) {
+          if (event?.policyLink && isValidURL(event.policyLink)) {
             ctx.replyWithDocument(`${hostname}${event.policyLink}`);
           } else {
             ctx.reply("Политики конфиденциальности пока нет.");
@@ -137,6 +134,16 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
 
         default:
           ctx.reply("Пожалуйста, используйте предоставленные кнопки.");
+          await ctx.reply(
+            "Кнопки в меню:",
+            Markup.keyboard([
+              ["🔢 Мой код", "🗺️ Карта"],
+              ["📅 Расписание", "📜 Условия"],
+              ["🔒 Политика конфиденциальности", "📋 Список мероприятий"],
+            ])
+              .oneTime(false)
+              .resize()
+          );
           break;
       }
     } else if (ctx.callbackQuery && "data" in ctx.callbackQuery) {
@@ -163,6 +170,16 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
       }
     } else {
       ctx.reply("Пожалуйста, используйте предоставленные кнопки.");
+      await ctx.reply(
+        "Кнопки в меню:",
+        Markup.keyboard([
+          ["🔢 Мой код", "🗺️ Карта"],
+          ["📅 Расписание", "📜 Условия"],
+          ["🔒 Политика конфиденциальности", "📋 Список мероприятий"],
+        ])
+          .oneTime(false)
+          .resize()
+      );
     }
   }
 );
