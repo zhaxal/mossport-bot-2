@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - PORT=${PORT_BACKEND}
+      - MONGO_URL=${MONGO_URL}
+      - HOSTNAME=${HOSTNAME}
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - BOT_TOKEN=${BOT_TOKEN}
+    ports:
+      - "${PORT_BACKEND}:${PORT_BACKEND}"
+    restart: always
+
+networks:
+  default:
+    driver: bridge
