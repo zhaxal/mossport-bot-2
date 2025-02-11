@@ -1,22 +1,12 @@
 version: '3.8'
 
 services:
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_BACKEND_URL: ${VITE_BACKEND_URL}
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-    restart: always
-
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: mosbot-backend
+    restart: always
     environment:
       - PORT=${PORT_BACKEND}
       - MONGO_URL=${MONGO_URL}
@@ -24,9 +14,17 @@ services:
       - ADMIN_TOKEN=${ADMIN_TOKEN}
       - BOT_TOKEN=${BOT_TOKEN}
     ports:
-      - "${PORT_BACKEND}:${PORT_BACKEND}"
-    restart: always
+      - ${PORT_BACKEND}:${PORT_BACKEND}
 
-networks:
-  default:
-    driver: bridge
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL}      
+    container_name: mosbot-frontend
+    restart: always
+    ports:
+      - 3000:3000
+    depends_on:
+      - backend          
