@@ -1,10 +1,9 @@
-import * as fs from "fs";
-import json2csv from "json2csv";
+import fs from "fs";
+import { parse as json2csvParse } from "json2csv";
 import { Router, Request, Response, NextFunction } from "express";
 import { ObjectId } from "mongodb";
 import { v4 as uuidv4 } from "uuid";
-import { IncomingForm } from "formidable";
-
+import { IncomingForm, Files, Fields } from "formidable";
 
 import {
   eventInfoCol,
@@ -15,16 +14,40 @@ import {
   subscribersCol,
   userPrizeStatusCol,
 } from "../database";
-
 import agenda from "../agenda";
 import { adminToken } from "../config";
 
 const adminRouter = Router();
 
+// Utility function to wrap a callback-based form parsing in a promise
+const parseForm = (req: Request): Promise<[Fields, Files]> =>
+  new Promise((resolve, reject) => {
+    const form = new IncomingForm();
+    form.parse(req, (err, fields, files) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve([fields, files]);
+    });
+  });
 
-const verifyAdminToken = (req: Request, res: Response, next: NextFunction) => {
+// Utility to promisify stream finish
+const streamFinished = (stream: NodeJS.WritableStream): Promise<void> =>
+  new Promise((resolve, reject) => {
+    stream.on("finish", resolve);
+    stream.on("error", reject);
+  });
+
+const toObjectId = (id: string): ObjectId => new ObjectId(id);
+
+const verifyAdminToken = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   if (req.headers.authorization !== adminToken) {
-    return res.status(401).json({ error: "Unauthorized" });
+    res.status(401).json({ error: "Unauthorized" });
+    return;
   }
   next();
 };
@@ -49,10 +72,7 @@ adminRouter.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const event = req.body;
-      await eventInfoCol.insertOne({
-        ...event,
-        status: "created",
-      });
+      await eventInfoCol.insertOne({ ...event, status: "created" });
       res.json({ message: "Event added" });
     } catch (err) {
       next(err);
@@ -65,10 +85,10 @@ adminRouter.patch(
   verifyAdminToken,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const eventId = req.params.eventId;
+      const { eventId } = req.params;
       const event = req.body;
       await eventInfoCol.updateOne(
-        { _id: new ObjectId(eventId) },
+        { _id: toObjectId(eventId) },
         { $set: event }
       );
       res.json({ message: "Event updated" });
@@ -83,58 +103,46 @@ adminRouter.post(
   verifyAdminToken,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const form = new IncomingForm();
-      const eventId = req.params.eventId;
-      const [fields, files] = await form.parse(req);
+      const { eventId, type } = req.params;
+      const [fields, files] = await parseForm(req);
       if (!files.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
-      const file = files.file[0];
+      // File may be an array or single file instance; we pick the first one if needed.
+      const fileData = Array.isArray(files.file) ? files.file[0] : files.file;
       const randomFileName = Math.random().toString(36).substring(7);
-      const uploadStream = bucket.openUploadStream(
-        file.originalFilename || `${file}${randomFileName}`,
-        {
-          chunkSizeBytes: file.size,
-        }
-      );
-      fs.createReadStream(file.filepath).pipe(uploadStream);
+      const filename =
+        fileData.originalFilename ||
+        `${fileData.newFilename}-${randomFileName}`;
+      const uploadStream = bucket.openUploadStream(filename, {
+        chunkSizeBytes: fileData.size,
+      });
+      fs.createReadStream(fileData.filepath).pipe(uploadStream);
+      await streamFinished(uploadStream);
 
-      // Wait for upload to finish
-      uploadStream.on("finish", async () => {
-        const fileLink = `/files/${uploadStream.filename.toString()}`;
-        switch (req.params.type) {
-          case "map":
-            await eventInfoCol.updateOne(
-              { _id: new ObjectId(eventId) },
-              { $set: { mapLink: fileLink } }
-            );
-            break;
-          case "rules":
-            await eventInfoCol.updateOne(
-              { _id: new ObjectId(eventId) },
-              { $set: { rulesLink: fileLink } }
-            );
-            break;
-          case "policy":
-            await eventInfoCol.updateOne(
-              { _id: new ObjectId(eventId) },
-              { $set: { policyLink: fileLink } }
-            );
-            break;
-          case "prizeTable":
-            await eventInfoCol.updateOne(
-              { _id: new ObjectId(eventId) },
-              { $set: { prizeTableLink: fileLink } }
-            );
-            break;
-          default:
-            return res.status(400).json({ error: "Invalid file type" });
-        }
-        res.json({ message: "File uploaded" });
-      });
-      uploadStream.on("error", (err) => {
-        next(err);
-      });
+      const fileLink = `/files/${uploadStream.filename.toString()}`;
+      const updateField: Record<string, string> = {};
+      switch (type) {
+        case "map":
+          updateField.mapLink = fileLink;
+          break;
+        case "rules":
+          updateField.rulesLink = fileLink;
+          break;
+        case "policy":
+          updateField.policyLink = fileLink;
+          break;
+        case "prizeTable":
+          updateField.prizeTableLink = fileLink;
+          break;
+        default:
+          return res.status(400).json({ error: "Invalid file type" });
+      }
+      await eventInfoCol.updateOne(
+        { _id: toObjectId(eventId) },
+        { $set: updateField }
+      );
+      res.json({ message: "File uploaded" });
     } catch (err) {
       next(err);
     }
@@ -149,7 +157,7 @@ adminRouter.patch(
       const token = uuidv4();
       await tokenCol.updateOne(
         { role: "operator" },
-        { $set: { token: token, updatedAt: new Date() } },
+        { $set: { token, updatedAt: new Date() } },
         { upsert: true }
       );
       res.json({ message: "Operator token updated" });
@@ -175,14 +183,13 @@ adminRouter.get(
   }
 );
 
-
 adminRouter.post(
   "/event/:eventId/notification",
   verifyAdminToken,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { message } = req.body;
-      const eventId = req.params.eventId;
+      const { eventId } = req.params;
       await agenda.now("send event notification", { eventId, message });
       res.json({ message: "Notification scheduled" });
     } catch (err) {
@@ -196,13 +203,12 @@ adminRouter.patch(
   verifyAdminToken,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const eventId = req.params.eventId;
+      const { eventId } = req.params;
       const { status } = req.body;
       await eventInfoCol.updateOne(
-        { _id: new ObjectId(eventId) },
+        { _id: toObjectId(eventId) },
         { $set: { status } }
       );
-
       if (status === "active") {
         agenda.now("send notifications", { eventId });
       }
@@ -218,11 +224,11 @@ adminRouter.get(
   verifyAdminToken,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const eventId = req.params.eventId;
+      const { eventId } = req.params;
       const users = await userCol
-        .find({ eventId: new ObjectId(eventId) })
+        .find({ eventId: toObjectId(eventId) })
         .toArray();
-      const csvData = json2csv.parse(users);
+      const csvData = json2csvParse(users);
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", "attachment; filename=users.csv");
       res.send(csvData);
@@ -237,10 +243,10 @@ adminRouter.patch(
   verifyAdminToken,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const eventId = req.params.eventId;
+      const { eventId } = req.params;
       const drawInfo = req.body;
       await drawInfoCol.updateOne(
-        { eventId: new ObjectId(eventId) },
+        { eventId: toObjectId(eventId) },
         { $set: drawInfo },
         { upsert: true }
       );
@@ -256,10 +262,8 @@ adminRouter.get(
   verifyAdminToken,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const eventId = req.params.eventId;
-      const draw = await drawInfoCol.findOne({
-        eventId: new ObjectId(eventId),
-      });
+      const { eventId } = req.params;
+      const draw = await drawInfoCol.findOne({ eventId: toObjectId(eventId) });
       if (!draw) {
         return res.status(404).json({ error: "Draw info not found" });
       }
@@ -269,7 +273,6 @@ adminRouter.get(
         winnerNumber: numberOfWinners,
         introMessage,
       } = draw;
-
 
       await agenda.now("send draw intro", { eventId, introMessage });
 
@@ -284,7 +287,7 @@ adminRouter.get(
         });
       }
       await drawInfoCol.updateOne(
-        { eventId: new ObjectId(eventId) },
+        { eventId: toObjectId(eventId) },
         { $set: { completed: true } }
       );
       res.json({ message: "Draw started" });
@@ -299,10 +302,11 @@ adminRouter.get(
   verifyAdminToken,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const eventId = req.params.eventId;
-      const winnersIds = await userPrizeStatusCol
-        .find({ eventId: new ObjectId(eventId) })
+      const { eventId } = req.params;
+      const winnersDocs = await userPrizeStatusCol
+        .find({ eventId: toObjectId(eventId) })
         .toArray();
+
       interface WinnersInfo {
         firstName: string;
         lastName: string;
@@ -310,10 +314,10 @@ adminRouter.get(
         prizeClaimed: boolean;
       }
       const winnersInfo: WinnersInfo[] = [];
-      for (const winner of winnersIds) {
+      for (const winner of winnersDocs) {
         const user = await userCol.findOne({
           shortId: winner.shortId,
-          eventId: new ObjectId(eventId),
+          eventId: toObjectId(eventId),
         });
         if (user) {
           winnersInfo.push({
@@ -336,9 +340,9 @@ adminRouter.get(
   verifyAdminToken,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const eventId = req.params.eventId;
+      const { eventId } = req.params;
       const users = await userCol
-        .find({ eventId: new ObjectId(eventId) })
+        .find({ eventId: toObjectId(eventId) })
         .toArray();
       interface UserCSV {
         num: number;
@@ -359,11 +363,11 @@ adminRouter.get(
           firstName: user.firstName,
           lastName: user.lastName,
           phoneNumber: user.phoneNumber,
-          winner: !!prizeStatus,
+          winner: Boolean(prizeStatus),
           prizeClaimed: prizeStatus?.claimed || false,
         });
       }
-      const csvData = json2csv.parse(usersCSV);
+      const csvData = json2csvParse(usersCSV);
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", "attachment; filename=users.csv");
       res.send(csvData);
@@ -389,13 +393,13 @@ adminRouter.get(
           { $replaceRoot: { newRoot: "$doc" } },
         ])
         .toArray();
-      const usersCSV = users.map((user, i) => ({
+      const usersCSV = users.map((user: any, i: number) => ({
         num: i + 1,
         firstName: user.firstName,
         lastName: user.lastName,
         phoneNumber: user.phoneNumber,
       }));
-      const csvData = json2csv.parse(usersCSV);
+      const csvData = json2csvParse(usersCSV);
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", "attachment; filename=users.csv");
       res.send(csvData);
