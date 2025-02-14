@@ -5,7 +5,7 @@ import randomNumber from "random-number-csprng";
 import { MyContext } from "../types/bot";
 import { eventInfoCol, subscribersCol, userCol } from "../database";
 import delay from "../utils/delay";
-import { hostname } from "../config";
+import { backendLink } from "../config";
 import { isValidURL } from "../utils/url";
 
 export interface RegistrationResult {
@@ -94,14 +94,14 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
           _id: new ObjectId(eventId),
         });
 
-        if (event?.rulesLink && isValidURL(`${hostname}${event.rulesLink}`)) {
-          await ctx.replyWithDocument(`${hostname}${event.rulesLink}`);
+        if (event?.rulesLink && isValidURL(`${backendLink}${event.rulesLink}`)) {
+          await ctx.replyWithDocument(`${backendLink}${event.rulesLink}`);
         } else {
           await ctx.reply("Правил участия пока нет.");
         }
 
-        if (event?.policyLink && isValidURL(`${hostname}${event.policyLink}`)) {
-          await ctx.replyWithDocument(`${hostname}${event.policyLink}`);
+        if (event?.policyLink && isValidURL(`${backendLink}${event.policyLink}`)) {
+          await ctx.replyWithDocument(`${backendLink}${event.policyLink}`);
         } else {
           await ctx.reply("Политики конфиденциальности пока нет.");
         }
@@ -215,7 +215,7 @@ async function processRegistration(
     await ctx.reply(`Расписание мероприятия.📜\n\n${event.schedule}`);
 
     if (event.mapLink) {
-      const mapUrl = `${hostname}${event.mapLink}`;
+      const mapUrl = `${backendLink}${event.mapLink}`;
       if (isValidURL(mapUrl)) {
         await delay(5000);
         await ctx.reply("И не забудь карту!📍");

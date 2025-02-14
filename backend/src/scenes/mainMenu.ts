@@ -3,7 +3,7 @@ import { Markup, Scenes } from "telegraf";
 
 import { MyContext } from "../types/bot";
 import { eventInfoCol, subscribersCol, userCol } from "../database";
-import { hostname } from "../config";
+import { backendLink } from "../config";
 import { isValidURL } from "../utils/url";
 
 const mainMenuKeyboard = Markup.keyboard([
@@ -67,10 +67,10 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
             await ctx.reply(`Твой секретный код: ${user.shortId}`);
             break;
           case "🗺️ Карта":
-            console.log("Sending map:", `${hostname}${event?.mapLink}`);
-            if (event?.mapLink && isValidURL(`${hostname}${event.mapLink}`)) {
+            console.log("Sending map:", `${backendLink}${event?.mapLink}`);
+            if (event?.mapLink && isValidURL(`${backendLink}${event.mapLink}`)) {
               
-              await ctx.replyWithDocument(`${hostname}${event.mapLink}`);
+              await ctx.replyWithDocument(`${backendLink}${event.mapLink}`);
             } else {
               await ctx.reply("Карты пока нет.");
             }
@@ -83,15 +83,15 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
             }
             break;
           case "📜 Условия":
-            if (event?.rulesLink && isValidURL(`${hostname}${event.rulesLink}`)) {
-              await ctx.replyWithDocument(`${hostname}${event.rulesLink}`);
+            if (event?.rulesLink && isValidURL(`${backendLink}${event.rulesLink}`)) {
+              await ctx.replyWithDocument(`${backendLink}${event.rulesLink}`);
             } else {
               await ctx.reply("Условий пока нет.");
             }
             break;
           case "🔒 Политика конфиденциальности":
-            if (event?.policyLink && isValidURL(`${hostname}${event.policyLink}`)) {
-              await ctx.replyWithDocument(`${hostname}${event.policyLink}`);
+            if (event?.policyLink && isValidURL(`${backendLink}${event.policyLink}`)) {
+              await ctx.replyWithDocument(`${backendLink}${event.policyLink}`);
             } else {
               await ctx.reply("Политики конфиденциальности пока нет.");
             }
