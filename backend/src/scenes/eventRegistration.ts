@@ -122,13 +122,21 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
 eventRegistrationWizard.action("confirm", async (ctx) => {
   try {
     await ctx.answerCbQuery("Регистрация завершена.");
-    // Offload registration processing without blocking the interaction
-    processRegistration(ctx).catch((error) =>
-      console.error("Error during registration process:", error)
-    );
+    
+    const result = await processRegistration(ctx);
+    if (result.success) {
+      // Clean up UI first
+      await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
+      // Then transition scene with proper session handling
+      await ctx.scene.enter("mainMenuWizard", { eventId: result.eventId });
+    } else {
+      await ctx.reply("Произошла ошибка во время регистрации. Пожалуйста, попробуйте позже.");
+      await ctx.scene.leave();
+    }
   } catch (error) {
     console.error("Error in confirm action:", error);
     await ctx.answerCbQuery("Произошла ошибка. Пожалуйста, попробуйте позже.");
+    await ctx.scene.leave();
   }
 });
 
@@ -201,15 +209,17 @@ async function processRegistration(ctx: MyContext) {
       await ctx.reply(event.partnerMessage2);
     }
 
-    // Clean up inline keyboards and enter main menu
-    await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
-    ctx.scene.enter("mainMenuWizard", { eventId: event._id.toString() });
+    // Instead of directly entering scene, return to the action handler
+    return {
+      success: true,
+      eventId: event._id.toString()
+    };
   } catch (error) {
     console.error("Error in processRegistration:", error);
-    await ctx.reply(
-      "Произошла ошибка во время регистрации. Пожалуйста, попробуйте позже."
-    );
-    ctx.scene.leave();
+    return {
+      success: false,
+      error: error
+    };
   }
 }
 
@@ -217,7 +227,9 @@ eventRegistrationWizard.action("cancel", async (ctx) => {
   try {
     await ctx.answerCbQuery("Регистрация отменена.");
     await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
-    ctx.scene.leave();
+    // Clear wizard state
+    ctx.wizard.state = {};
+    await ctx.scene.leave();
   } catch (error) {
     console.error("Error in cancel action:", error);
     await ctx.answerCbQuery("Произошла ошибка. Пожалуйста, попробуйте позже.");

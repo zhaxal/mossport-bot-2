@@ -87,29 +87,29 @@ agenda.define("send notifications", async (job) => {
 
     const subscribers = await subscribersCol.find().toArray();
 
-    const sendMessages = (subscriber: any) =>
-      Promise.allSettled([
-        bot.telegram.sendMessage(
-          subscriber.telegramId,
-          `Привет, ${subscriber.name}!\nОткрыта регистрация на ${event.title}!\nВперед!`
-        ),
-        bot.telegram.sendMessage(
-          subscriber.telegramId,
-          `${event.description}`,
-          {
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: "Участвовать",
-                    callback_data: `event_${event._id}`,
-                  },
-                ],
+    const sendMessages = async (subscriber: any) => {
+      await bot.telegram.sendMessage(
+        subscriber.telegramId,
+        `Привет, ${subscriber.name}!\nОткрыта регистрация на ${event.title}!\nВперед!`
+      );
+
+      await bot.telegram.sendMessage(
+        subscriber.telegramId,
+        `${event.description}`,
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "Участвовать",
+                  callback_data: `event_${event._id}`,
+                },
               ],
-            },
-          }
-        ),
-      ]);
+            ],
+          },
+        }
+      );
+    };
 
     await Promise.allSettled(subscribers.map(sendMessages));
   } catch (error) {
