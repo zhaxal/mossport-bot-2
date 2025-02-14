@@ -8,6 +8,19 @@ import delay from "../utils/delay";
 import { hostname } from "../config";
 import { isValidURL } from "../utils/url";
 
+export interface RegistrationResult {
+  success: boolean;
+  eventId?: string;
+  error?: unknown;
+}
+
+export interface RegistrationState {
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  eventId: string;
+}
+
 export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
   "eventRegistrationWizard",
   async (ctx) => {
@@ -122,15 +135,18 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
 eventRegistrationWizard.action("confirm", async (ctx) => {
   try {
     await ctx.answerCbQuery("Регистрация завершена.");
-    
-    const result = await processRegistration(ctx);
-    if (result.success) {
+
+    const result: RegistrationResult = await processRegistration(ctx);
+
+    if (result?.success && result.eventId) {
       // Clean up UI first
       await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
       // Then transition scene with proper session handling
       await ctx.scene.enter("mainMenuWizard", { eventId: result.eventId });
     } else {
-      await ctx.reply("Произошла ошибка во время регистрации. Пожалуйста, попробуйте позже.");
+      await ctx.reply(
+        "Произошла ошибка во время регистрации. Пожалуйста, попробуйте позже."
+      );
       await ctx.scene.leave();
     }
   } catch (error) {
@@ -140,16 +156,22 @@ eventRegistrationWizard.action("confirm", async (ctx) => {
   }
 });
 
-async function processRegistration(ctx: MyContext) {
+async function processRegistration(
+  ctx: MyContext
+): Promise<RegistrationResult> {
   try {
-    const { firstName, lastName, phoneNumber, eventId } = ctx.wizard.state;
+    const state = ctx.wizard.state as RegistrationState;
+    const { firstName, lastName, phoneNumber, eventId } = state;
     const userId = ctx.from?.id;
 
-    if (!firstName || !lastName || !phoneNumber || !eventId) {
+    if (!firstName || !lastName || !phoneNumber || !eventId || !userId) {
       await ctx.reply(
         "Произошла ошибка. Пожалуйста, начните с команды /start."
       );
-      return ctx.scene.leave();
+      return {
+        success: false,
+        error: "Missing required registration data",
+      };
     }
 
     const subscriber = await subscribersCol.findOne({ telegramId: userId });
@@ -157,7 +179,10 @@ async function processRegistration(ctx: MyContext) {
       await ctx.reply(
         "Произошла ошибка. Пожалуйста, начните с команды /start."
       );
-      return ctx.scene.leave();
+      return {
+        success: false,
+        error: "Subscriber not found",
+      };
     }
 
     const shortId = await randomNumber(100000, 999999);
@@ -176,7 +201,10 @@ async function processRegistration(ctx: MyContext) {
       await ctx.reply(
         "Произошла ошибка. Пожалуйста, начните с команды /start."
       );
-      return ctx.scene.leave();
+      return {
+        success: false,
+        error: "Event not found",
+      };
     }
 
     await ctx.reply(
@@ -212,13 +240,13 @@ async function processRegistration(ctx: MyContext) {
     // Instead of directly entering scene, return to the action handler
     return {
       success: true,
-      eventId: event._id.toString()
+      eventId: event._id.toString(),
     };
   } catch (error) {
     console.error("Error in processRegistration:", error);
     return {
       success: false,
-      error: error
+      error,
     };
   }
 }
