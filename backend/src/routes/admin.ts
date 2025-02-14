@@ -276,7 +276,15 @@ adminRouter.get(
 
       await agenda.now("send draw intro", { eventId, introMessage });
 
-      for (let i = 1; i <= numberOfDraws; i++) {
+      // First draw immediately
+      agenda.now("draw", {
+        eventId,
+        numberOfWinners,
+        winnersMessage: draw.winnersMessage,
+      });
+
+      // Schedule remaining draws
+      for (let i = 1; i < numberOfDraws; i++) {
         const scheduledTime = new Date(
           Date.now() + drawInterval * 60 * 60 * 1000 * i
         );
