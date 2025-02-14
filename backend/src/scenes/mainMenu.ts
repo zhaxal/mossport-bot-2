@@ -10,7 +10,9 @@ const mainMenuKeyboard = Markup.keyboard([
   ["🔢 Мой код", "🗺️ Карта"],
   ["📅 Расписание", "📜 Условия"],
   ["🔒 Политика конфиденциальности", "📋 Список мероприятий"],
-]).oneTime(false).resize();
+])
+  .oneTime(false)
+  .resize();
 
 async function sendMainMenu(ctx: MyContext): Promise<void> {
   await ctx.reply("Кнопки в меню:", mainMenuKeyboard);
@@ -22,7 +24,9 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
     try {
       const subscriberId = ctx.from?.id;
       const eventId = ctx.wizard.state.eventId;
-      const subscriber = await subscribersCol.findOne({ telegramId: subscriberId });
+      const subscriber = await subscribersCol.findOne({
+        telegramId: subscriberId,
+      });
       const user = await userCol.findOne({
         subscriberId: subscriber?._id,
         eventId: new ObjectId(eventId),
@@ -45,7 +49,9 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
       if (ctx.message && "text" in ctx.message) {
         const userId = ctx.from?.id;
         const eventId = ctx.wizard.state.eventId;
-        const event = await eventInfoCol.findOne({ _id: new ObjectId(eventId) });
+        const event = await eventInfoCol.findOne({
+          _id: new ObjectId(eventId),
+        });
         const subscriber = await subscribersCol.findOne({ telegramId: userId });
         const user = await userCol.findOne({
           subscriberId: subscriber?._id,
@@ -61,7 +67,9 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
             await ctx.reply(`Твой секретный код: ${user.shortId}`);
             break;
           case "🗺️ Карта":
-            if (event?.mapLink && isValidURL(event.mapLink)) {
+            console.log("Sending map:", `${hostname}${event?.mapLink}`);
+            if (event?.mapLink && isValidURL(`${hostname}${event.mapLink}`)) {
+              
               await ctx.replyWithDocument(`${hostname}${event.mapLink}`);
             } else {
               await ctx.reply("Карты пока нет.");
@@ -75,21 +83,23 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
             }
             break;
           case "📜 Условия":
-            if (event?.rulesLink && isValidURL(event.rulesLink)) {
+            if (event?.rulesLink && isValidURL(`${hostname}${event.rulesLink}`)) {
               await ctx.replyWithDocument(`${hostname}${event.rulesLink}`);
             } else {
               await ctx.reply("Условий пока нет.");
             }
             break;
           case "🔒 Политика конфиденциальности":
-            if (event?.policyLink && isValidURL(event.policyLink)) {
+            if (event?.policyLink && isValidURL(`${hostname}${event.policyLink}`)) {
               await ctx.replyWithDocument(`${hostname}${event.policyLink}`);
             } else {
               await ctx.reply("Политики конфиденциальности пока нет.");
             }
             break;
           case "📋 Список мероприятий": {
-            const events = await eventInfoCol.find({ status: "active" }).toArray();
+            const events = await eventInfoCol
+              .find({ status: "active" })
+              .toArray();
 
             if (events.length === 0) {
               await ctx.reply(
@@ -108,7 +118,10 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
               keyboard
             );
 
-            const message = await ctx.reply("Убираем клавиатуру...", Markup.removeKeyboard());
+            const message = await ctx.reply(
+              "Убираем клавиатуру...",
+              Markup.removeKeyboard()
+            );
             if (message.message_id && ctx.chat?.id) {
               await ctx.telegram.deleteMessage(ctx.chat.id, message.message_id);
             }
