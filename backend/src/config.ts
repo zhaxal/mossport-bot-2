@@ -8,4 +8,4 @@ export const mongoUrl =
   process.env.MONGO_URL || "mongodb://0.0.0.0:27017/mossport-database-2";
 export const dbName = process.env.DB_NAME || "mossport-database-2";
 export const adminToken = process.env.ADMIN_TOKEN;
-export const backendLink = process.env.HOSTNAME || `https://admin.mossport.info/api`;
+export const backendLink = process.env.BACKEND_LINK || `https://admin.mossport.info/api`;

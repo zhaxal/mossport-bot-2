@@ -10,7 +10,7 @@ services:
     environment:
       - PORT=${PORT_BACKEND}
       - MONGO_URL=${MONGO_URL}
-      - HOSTNAME=${HOSTNAME}
+      - BACKEND_LINK=${BACKEND_LINK}
       - ADMIN_TOKEN=${ADMIN_TOKEN}
       - BOT_TOKEN=${BOT_TOKEN}
     ports:
