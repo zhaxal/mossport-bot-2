@@ -7,7 +7,7 @@ import { eventInfoCol, subscribersCol, client } from "./database";
 import { mainMenuWizard } from "./scenes/mainMenu";
 import { eventRegistrationWizard } from "./scenes/eventRegistration";
 
-import { botToken } from "./config";
+import { botToken, dbName } from "./config";
 import { Mongo } from "@telegraf/session/mongodb";
 
 const bot = new Telegraf<MyContext>(botToken);
@@ -19,6 +19,7 @@ const stage = new Scenes.Stage<MyContext>([
 
 const store = Mongo<{}>({
   client,
+  database: dbName,
 });
 
 bot.use(session({ store }));
