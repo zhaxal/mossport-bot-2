@@ -211,22 +211,22 @@ async function processRegistration(
       `Теперь у тебя есть уникальный код, который участвует в розыгрыше призов. Если ты станешь победителем, ты получишь сообщение. Удачи! 🫶🏼`
     );
 
-    await delay(5000);
-    await ctx.reply(`Расписание мероприятия.📜\n\n${event.schedule}`);
+    // await delay(5000);
+    // await ctx.reply(`Расписание мероприятия.📜\n\n${event.schedule}`);
 
-    if (event.mapLink) {
-      const mapUrl = `${backendLink}${event.mapLink}`;
-      if (isValidURL(mapUrl)) {
-        await delay(5000);
-        await ctx.reply("И не забудь карту!📍");
-        await ctx.replyWithDocument(mapUrl);
-      }
-    }
+    // if (event.mapLink) {
+    //   const mapUrl = `${backendLink}${event.mapLink}`;
+    //   if (isValidURL(mapUrl)) {
+    //     await delay(5000);
+    //     await ctx.reply("И не забудь карту!📍");
+    //     await ctx.replyWithDocument(mapUrl);
+    //   }
+    // }
 
-    await delay(5000);
-    await ctx.reply(
-      "Карту, расписание, условия участия и политику конфиденциальности ты всегда сможешь найти в меню.⬇"
-    );
+    // await delay(5000);
+    // await ctx.reply(
+    //   "Карту, расписание, условия участия и политику конфиденциальности ты всегда сможешь найти в меню.⬇"
+    // );
 
     if (event.partnerMessage) {
       await delay(5000);
