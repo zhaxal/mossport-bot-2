@@ -12,6 +12,7 @@ export interface RegistrationResult {
   success: boolean;
   eventId?: string;
   error?: unknown;
+  registeredBefore?: boolean;
 }
 
 export interface RegistrationState {
@@ -185,16 +186,54 @@ async function processRegistration(
       };
     }
 
-    const shortId = await randomNumber(100000, 999999);
-
-    await userCol.insertOne({
+    // Check if user is already registered for this event
+    const existingUser = await userCol.findOne({
       subscriberId: subscriber._id,
-      firstName,
-      lastName,
-      phoneNumber,
-      shortId,
       eventId: new ObjectId(eventId),
     });
+    
+    if (existingUser) {
+      await ctx.reply(
+        "Вы уже зарегистрированы на это событие. Ваш код: " + existingUser.shortId
+      );
+      return {
+        success: true,
+        registeredBefore: true,
+      };
+    }
+
+    const shortId = await randomNumber(100000, 999999);
+
+    try {
+      await userCol.insertOne({
+        subscriberId: subscriber._id,
+        firstName,
+        lastName,
+        phoneNumber,
+        shortId,
+        eventId: new ObjectId(eventId),
+      });
+    } catch (error: any) {
+      // If we get a duplicate key error (code 11000), handle it gracefully
+      if (error.code === 11000) {
+        const existing = await userCol.findOne({
+          subscriberId: subscriber._id,
+          eventId: new ObjectId(eventId),
+        });
+        
+        if (existing) {
+          await ctx.reply(
+            "Вы уже зарегистрированы на это событие. Ваш код: " + existing.shortId
+          );
+          return {
+            success: true,
+            registeredBefore: true,
+          };
+        }
+      }
+      // If it's not a duplicate key error or we couldn't find the existing record, rethrow
+      throw error;
+    }
 
     const event = await eventInfoCol.findOne({ _id: new ObjectId(eventId) });
     if (!event) {

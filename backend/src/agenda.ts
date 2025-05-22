@@ -53,13 +53,26 @@ agenda.define("draw", async (job) => {
       })
       .toArray();
 
-    await userPrizeStatusCol.insertMany(
-      winners.map((winner) => ({
-        shortId: winner.shortId,
-        claimed: false,
-        eventId: new ObjectId(eventId),
-      }))
-    );
+    try {
+      // Using ordered: false ensures that even if some documents fail to insert due to duplicates,
+      // the operation continues for the remaining documents
+      await userPrizeStatusCol.insertMany(
+        winners.map((winner) => ({
+          shortId: winner.shortId,
+          claimed: false,
+          eventId: new ObjectId(eventId),
+        })),
+        { ordered: false }
+      );
+    } catch (error: any) {
+      // MongoDB duplicate key error has code 11000
+      if (error.code === 11000 || (error.writeErrors && error.writeErrors.some((err: any) => err.code === 11000))) {
+        console.log("Some users were already in the winners list, skipping duplicates");
+      } else {
+        // If it's not a duplicate key error, rethrow
+        throw error;
+      }
+    }
 
     await Promise.allSettled(
       subscribers.map(async (subscriber) => {

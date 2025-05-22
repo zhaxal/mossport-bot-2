@@ -127,13 +127,13 @@ async function createIndexes() {
   await createIndexWithErrorHandling(userCol, { eventId: 1 }, {}, "userCol.eventId");
   await createIndexWithErrorHandling(userCol, { subscriberId: 1 }, {}, "userCol.subscriberId");
   await createIndexWithErrorHandling(userCol, { shortId: 1 }, {}, "userCol.shortId");
-  await createIndexWithErrorHandling(userCol, { eventId: 1, subscriberId: 1 }, {}, "userCol.eventId+subscriberId");
-  await createIndexWithErrorHandling(userCol, { eventId: 1, shortId: 1 }, {}, "userCol.eventId+shortId");
+  await createIndexWithErrorHandling(userCol, { eventId: 1, subscriberId: 1 }, { unique: true }, "userCol.eventId+subscriberId (unique)");
+  await createIndexWithErrorHandling(userCol, { eventId: 1, shortId: 1 }, { unique: true }, "userCol.eventId+shortId (unique)");
 
   // Indexes for userPrizeStatusCol
   await createIndexWithErrorHandling(userPrizeStatusCol, { eventId: 1 }, {}, "userPrizeStatusCol.eventId");
   await createIndexWithErrorHandling(userPrizeStatusCol, { shortId: 1 }, {}, "userPrizeStatusCol.shortId");
-  await createIndexWithErrorHandling(userPrizeStatusCol, { eventId: 1, shortId: 1 }, {}, "userPrizeStatusCol.eventId+shortId");
+  await createIndexWithErrorHandling(userPrizeStatusCol, { eventId: 1, shortId: 1 }, { unique: true }, "userPrizeStatusCol.eventId+shortId (unique)");
 
   // Indexes for drawInfoCol
   await createIndexWithErrorHandling(drawInfoCol, { eventId: 1 }, { unique: true }, "drawInfoCol.eventId");
