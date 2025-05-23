@@ -8,6 +8,10 @@ import delay from "../utils/delay";
 import { backendLink } from "../config";
 import { isValidURL } from "../utils/url";
 
+// Add set to track processed message IDs
+const processedMessageIds = new Set<string>();
+const processedCallbackIds = new Set<string>();
+
 export interface RegistrationResult {
   success: boolean;
   eventId?: string;
@@ -135,6 +139,16 @@ export const eventRegistrationWizard = new Scenes.WizardScene<MyContext>(
 
 eventRegistrationWizard.action("confirm", async (ctx) => {
   try {
+    // Check if this callback has already been processed
+    const callbackId = ctx.callbackQuery?.id;
+    if (!callbackId || processedCallbackIds.has(callbackId)) {
+      await ctx.answerCbQuery("Запрос уже обрабатывается");
+      return;
+    }
+    
+    // Mark this callback as processed
+    processedCallbackIds.add(callbackId);
+    
     await ctx.answerCbQuery("Регистрация завершена.");
 
     const result: RegistrationResult = await processRegistration(ctx);
@@ -150,6 +164,12 @@ eventRegistrationWizard.action("confirm", async (ctx) => {
       );
       await ctx.scene.leave();
     }
+    
+    // Clear the ID after some time to prevent memory leaks
+    setTimeout(() => {
+      processedCallbackIds.delete(callbackId);
+    }, 10000); // Remove after 10 seconds
+    
   } catch (error) {
     console.error("Error in confirm action:", error);
     await ctx.answerCbQuery("Произошла ошибка. Пожалуйста, попробуйте позже.");
@@ -292,11 +312,27 @@ async function processRegistration(
 
 eventRegistrationWizard.action("cancel", async (ctx) => {
   try {
+    // Check if this callback has already been processed
+    const callbackId = ctx.callbackQuery?.id;
+    if (!callbackId || processedCallbackIds.has(callbackId)) {
+      await ctx.answerCbQuery("Запрос уже обрабатывается");
+      return;
+    }
+    
+    // Mark this callback as processed
+    processedCallbackIds.add(callbackId);
+    
     await ctx.answerCbQuery("Регистрация отменена.");
     await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
     // Clear wizard state
     ctx.wizard.state = {};
     await ctx.scene.leave();
+    
+    // Clear the ID after some time
+    setTimeout(() => {
+      processedCallbackIds.delete(callbackId);
+    }, 10000); // Remove after 10 seconds
+    
   } catch (error) {
     console.error("Error in cancel action:", error);
     await ctx.answerCbQuery("Произошла ошибка. Пожалуйста, попробуйте позже.");
