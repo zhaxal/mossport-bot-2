@@ -9,7 +9,7 @@ import { isValidURL } from "../utils/url";
 const mainMenuKeyboard = Markup.keyboard([
   ["🔢 Мой код", "🗺️ Карта"],
   ["📅 Расписание", "📜 Условия"],
-  ["🔒 Политика конфиденциальности", "📋 Список мероприятий"],
+  ["🔒 Политика конфиденциальности"],
 ])
   .oneTime(false)
   .resize();
@@ -68,8 +68,10 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
             break;
           case "🗺️ Карта":
             console.log("Sending map:", `${backendLink}${event?.mapLink}`);
-            if (event?.mapLink && isValidURL(`${backendLink}${event.mapLink}`)) {
-              
+            if (
+              event?.mapLink &&
+              isValidURL(`${backendLink}${event.mapLink}`)
+            ) {
               await ctx.replyWithDocument(`${backendLink}${event.mapLink}`);
             } else {
               await ctx.reply("Карты пока нет.");
@@ -83,50 +85,56 @@ export const mainMenuWizard = new Scenes.WizardScene<MyContext>(
             }
             break;
           case "📜 Условия":
-            if (event?.rulesLink && isValidURL(`${backendLink}${event.rulesLink}`)) {
+            if (
+              event?.rulesLink &&
+              isValidURL(`${backendLink}${event.rulesLink}`)
+            ) {
               await ctx.replyWithDocument(`${backendLink}${event.rulesLink}`);
             } else {
               await ctx.reply("Условий пока нет.");
             }
             break;
           case "🔒 Политика конфиденциальности":
-            if (event?.policyLink && isValidURL(`${backendLink}${event.policyLink}`)) {
+            if (
+              event?.policyLink &&
+              isValidURL(`${backendLink}${event.policyLink}`)
+            ) {
               await ctx.replyWithDocument(`${backendLink}${event.policyLink}`);
             } else {
               await ctx.reply("Политики конфиденциальности пока нет.");
             }
             break;
-          case "📋 Список мероприятий": {
-            const events = await eventInfoCol
-              .find({ status: "active" })
-              .toArray();
+          // case "📋 Список мероприятий": {
+          //   const events = await eventInfoCol
+          //     .find({ status: "active" })
+          //     .toArray();
 
-            if (events.length === 0) {
-              await ctx.reply(
-                `Привет, ${ctx.from?.first_name}!\nАктивных событий на данный момент нет, но как только будет что-то известно, мы напишем тебе здесь!`
-              );
-              return;
-            }
+          //   if (events.length === 0) {
+          //     await ctx.reply(
+          //       `Привет, ${ctx.from?.first_name}!\nАктивных событий на данный момент нет, но как только будет что-то известно, мы напишем тебе здесь!`
+          //     );
+          //     return;
+          //   }
 
-            const keyboard = Markup.inlineKeyboard(
-              events.map((event) => [
-                Markup.button.callback(event.title, `event_${event._id}`),
-              ])
-            );
-            await ctx.reply(
-              `Привет, ${ctx.from?.first_name}!\nОткрыты регистрации на:`,
-              keyboard
-            );
+          //   const keyboard = Markup.inlineKeyboard(
+          //     events.map((event) => [
+          //       Markup.button.callback(event.title, `event_${event._id}`),
+          //     ])
+          //   );
+          //   await ctx.reply(
+          //     `Привет, ${ctx.from?.first_name}!\nОткрыты регистрации на:`,
+          //     keyboard
+          //   );
 
-            const message = await ctx.reply(
-              "Убираем клавиатуру...",
-              Markup.removeKeyboard()
-            );
-            if (message.message_id && ctx.chat?.id) {
-              await ctx.telegram.deleteMessage(ctx.chat.id, message.message_id);
-            }
-            return ctx.scene.leave();
-          }
+          //   const message = await ctx.reply(
+          //     "Убираем клавиатуру...",
+          //     Markup.removeKeyboard()
+          //   );
+          //   if (message.message_id && ctx.chat?.id) {
+          //     await ctx.telegram.deleteMessage(ctx.chat.id, message.message_id);
+          //   }
+          //   return ctx.scene.leave();
+          // }
           default:
             await ctx.reply("Пожалуйста, используйте предоставленные кнопки.");
             await sendMainMenu(ctx);
